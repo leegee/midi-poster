@@ -1,8 +1,3 @@
-/*
-midi-row.ts
-Build a horizontal row of one or more RenderedMidi objects.
-*/
-
 import sharp from "sharp";
 import fs from "node:fs";
 import { type RenderedMidi, type NoteRectRendered, type TrackInfo } from "./midi-render";
@@ -10,10 +5,10 @@ import { type RenderedMidi, type NoteRectRendered, type TrackInfo } from "./midi
 export type RowOptions = {
     background?: string;
     showTrackNames?: boolean;
-    trackNameHeight?: number; // space for track labels
+    trackNameHeight?: number;
     softNotes?: boolean;
     blur?: number;
-    blendMode?: string; // e.g., 'multiply', 'screen', 'overlay'
+    blendMode?: string;
 };
 
 export function buildSvgRow(midis: RenderedMidi[], opts?: RowOptions): string {
@@ -29,7 +24,6 @@ export function buildSvgRow(midis: RenderedMidi[], opts?: RowOptions): string {
     let maxHeight = 0;
 
     for (const midi of midis) {
-        // Collect defs (e.g. blur filter)
         if (midi.defs) {
             midi.defs.replace(/<defs>([\s\S]*?)<\/defs>/g, (_: string, inner: string) => {
                 inner.split(/\n/).forEach((d: string) => {
@@ -39,29 +33,33 @@ export function buildSvgRow(midis: RenderedMidi[], opts?: RowOptions): string {
             });
         }
 
-        // Notes
         midi.rects.forEach((r: NoteRectRendered) => {
-            const blurFilter = opts?.softNotes ? `filter="url(#noteBlur)"` : "";
-            const blend = opts?.blendMode ? `style="mix-blend-mode: ${opts.blendMode}"` : "";
-            noteElements.push(`
-        <g transform="translate(${xOffset}, ${showTrackNames ? trackNameHeight : 0})">
-          <rect
-            x="${r.x}"
-            y="${r.y}"
-            width="${r.w}"
-            height="${r.h}"
-            fill="${r.color}"
-            fill-opacity="${0.6 + r.velocity * 0.35}"
-            rx="${r.rx ?? r.h / 2}"
-            ry="${r.ry ?? r.h / 2}"
-            ${blurFilter}
-            ${blend}
-          />
-        </g>
-      `);
+            const blurFilter = opts?.softNotes ? "filter='url(#noteBlur)'" : "";
+
+            if (r.shape === "star" && r.starPoints) {
+                // noteElements.push(`
+                //     <polygon points="${r.starPoints}" fill="${r.color}" fill-opacity="${0.6 + r.velocity * 0.35}" />
+                // `);
+            } else {
+                noteElements.push(`
+                    <g transform="translate(${xOffset}, ${showTrackNames ? trackNameHeight : 0})">
+                      <rect
+                        x="${r.x}"
+                        y="${r.y}"
+                        width="${r.w}"
+                        height="${r.h}"
+                        fill="${r.color}"
+                        fill-opacity="${0.6 + r.velocity * 0.35}"
+                        rx="${r.rx ?? r.h / 2}"
+                        ry="${r.ry ?? r.h / 2}"
+                        ${blurFilter}
+                      />
+                    </g>
+                `);
+            }
         });
 
-        // Optional track names
+
         if (showTrackNames) {
             midi.tracks.forEach((t: TrackInfo) => {
                 console.info(`Track ${t.name} ... ${t.color}`);

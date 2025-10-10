@@ -94,7 +94,6 @@ async function main() {
   const svg = buildSvgRow(renderedMidis, {
     softNotes: argv.softNotes,
     blur: argv.blur,
-    noteScaleFactor: argv.noteScaleFactor,
   });
 
   await writeSvgAndPng(svg, svgOutputPath || "out.svg", argv.width, argv.height);
