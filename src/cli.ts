@@ -18,7 +18,7 @@ async function main() {
     .option("blur", { type: "number", description: "Gaussian blur radius for soft notes", default: 2 })
     .option('blend-mode', { type: "string", description: 'SVG blend mode (multiply, screen, overlay, etc.)', default: 'normal' })
     .option('background', { type: "string", description: 'Sets a background', default: "#FFF" })
-    .option('dark-mode', { type: "boolean", description: 'Sets a dark background', default: true })
+    .option('dark-mode', { type: "boolean", description: 'Sets a dark background', default: false })
     .option("velocity-scaled-height", {
       type: "boolean",
       description: "Scale note thickness by note velocity",
@@ -88,7 +88,6 @@ async function main() {
       velocityScaledHeight: argv.velocityScaledHeight,
       minNoteHeight: argv.minNoteHeight,
       blendMode: argv.blendMode,
-      darkMode: argv.darkMode,
     });
     renderedMidis.push(rendered);
     xOffset += rendered.width;
@@ -97,9 +96,11 @@ async function main() {
   const svg = buildSvgRow(renderedMidis, {
     softNotes: argv.softNotes,
     blur: argv.blur,
+    background: argv.background,
+    blendMode: argv.blendMode,
   });
 
-  await writeSvgAndPng(svg, svgOutputPath || "out.svg", argv.width, argv.height);
+  await writeSvgAndPng(svg, svgOutputPath || argv.blendMode + "-out.svg", argv.width, argv.height);
 }
 
 main().catch((err) => {

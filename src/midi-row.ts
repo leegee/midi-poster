@@ -9,80 +9,7 @@ export type RowOptions = {
     softNotes?: boolean;
     blur?: number;
     blendMode?: string; // e.g., 'multiply', 'screen'
-    darkMode?: boolean; // black background if true
 };
-
-export function buildSvgRow(midis: RenderedMidi[], opts?: RowOptions): string {
-    const darkMode = opts?.darkMode ?? false;
-    const background = darkMode ? "#000" : opts?.background ?? "#fff";
-    const showTrackNames = opts?.showTrackNames ?? true;
-    const trackNameHeight = opts?.trackNameHeight ?? 20;
-    const blendMode = opts?.blendMode ?? "normal";
-
-    let xOffset = 0;
-    const noteElements: string[] = [];
-    const allDefs = new Map<string, string>();
-
-    let totalWidth = 0;
-    let maxHeight = 0;
-
-    for (const midi of midis) {
-        if (midi.defs) {
-            midi.defs.replace(/<defs>([\s\S]*?)<\/defs>/g, (_: string, inner: string) => {
-                inner.split(/\n/).forEach((d: string) => {
-                    if (d.trim()) allDefs.set(d.trim(), d.trim());
-                });
-                return "";
-            });
-        }
-
-        midi.rects.forEach((r: NoteRectRendered) => {
-            const blurFilter = opts?.softNotes ? "filter='url(#noteBlur)'" : "";
-
-            if (r.shape === "star" && r.starPoints) {
-                noteElements.push(`
-                    <polygon points="${r.starPoints}" fill="${r.color}" fill-opacity="${0.6 + r.velocity * 0.35}" />
-                `);
-            } else {
-                noteElements.push(`
-                    <g transform="translate(${xOffset}, ${showTrackNames ? trackNameHeight : 0})" style="mix-blend-mode:${blendMode}">
-                      <rect
-                        x="${r.x}"
-                        y="${r.y}"
-                        width="${r.w}"
-                        height="${r.h}"
-                        fill="${r.color}"
-                        fill-opacity="${0.6 + r.velocity * 0.35}"
-                        rx="${r.rx ?? r.h / 2}"
-                        ry="${r.ry ?? r.h / 2}"
-                        ${blurFilter}
-                      />
-                    </g>
-                `);
-            }
-        });
-
-        if (showTrackNames) {
-            midi.tracks.forEach((t: TrackInfo) => {
-                console.info(`Track ${t.name} ... ${t.color}`);
-            });
-        }
-
-        totalWidth += midi.width;
-        maxHeight = Math.max(maxHeight, midi.height + (showTrackNames ? trackNameHeight : 0));
-        xOffset += midi.width;
-    }
-
-    const defsString = `<defs>${[...allDefs.values()].join("\n")}</defs>`;
-
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${maxHeight}"
-     viewBox="0 0 ${totalWidth} ${maxHeight}" preserveAspectRatio="xMidYMid meet">
-  ${defsString}
-  <rect x="0" y="0" width="${totalWidth}" height="${maxHeight}" fill="${background}" />
-  <g id="notes">${noteElements.join("\n")}</g>
-</svg>`;
-}
 
 export async function writeSvgAndPng(svg: string, svgOutPath: string, width = 2048, height = 780) {
     fs.writeFileSync(svgOutPath, svg);
@@ -90,8 +17,61 @@ export async function writeSvgAndPng(svg: string, svgOutPath: string, width = 20
 
     const pngOutputPath = svgOutPath.replace(/\.svg$/i, ".png");
     await sharp(Buffer.from(svg))
-        .resize({ width, height })
+        .resize({ width })
         .png()
         .toFile(pngOutputPath);
     console.log("Wrote", pngOutputPath);
+}
+
+export function buildSvgRow(
+    renderedMidis: RenderedMidi[],
+    options: {
+        softNotes?: boolean;
+        blur?: number;
+        noteScaleFactor?: number;
+        blendMode?: string;
+        background?: string;
+    } = {}
+): string {
+    const { blendMode, background = "#FFF" } = options;
+
+    const bgColor = background ?? "white";
+    const fgBlend = blendMode ? `mix-blend-mode:${blendMode};` : "";
+
+    // SVG header setup
+    const totalWidth = renderedMidis.reduce((acc, r) => acc + r.width, 0);
+    const maxHeight = Math.max(...renderedMidis.map(r => r.height));
+
+    // Combine all <defs> blocks into one
+    const combinedDefs = renderedMidis
+        .map(r => r.defs)
+        .filter(Boolean)
+        .join("\n");
+
+    // Draw all note shapes
+    let content = "";
+    let xOffset = 0;
+    for (const midi of renderedMidis) {
+        for (const rect of midi.rects) {
+            const filter = rect.filter ? `filter="${rect.filter}"` : "";
+            const fillOpacity = 0.9 - (1 - rect.velocity) * 0.5; // softer = more transparent
+
+            if (rect.shape === "star" && rect.starPoints) {
+                content += `<polygon points="${rect.starPoints}" fill="${rect.color}" fill-opacity="${fillOpacity}" ${filter} style="${fgBlend}"/>`;
+            } else {
+                content += `<rect x="${rect.x + xOffset}" y="${rect.y}" width="${rect.w}" height="${rect.h}"
+                    fill="${rect.color}" fill-opacity="${fillOpacity}" ${filter} rx="${rect.rx ?? 0}" ry="${rect.ry ?? 0}"
+                    style="${fgBlend}"/>`;
+            }
+        }
+        xOffset += midi.width;
+    }
+
+    // Assemble SVG
+    return `
+<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${maxHeight}" viewBox="0 0 ${totalWidth} ${maxHeight}">
+  <rect width="100%" height="100%" fill="${bgColor}" />
+  ${combinedDefs ? combinedDefs : ""}
+  ${content}
+</svg>`;
 }

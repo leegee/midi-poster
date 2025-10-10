@@ -12,6 +12,7 @@ export interface NoteRectRendered {
     ry?: number;
     shape?: "rect" | "star";
     starPoints?: string; // SVG polygon points if shape === "star"
+    filter?: string;
 }
 
 export interface TrackInfo {
@@ -39,7 +40,6 @@ export interface RenderOptions {
     minNoteHeight?: number;
     velocityScaledHeight?: boolean;
     blendMode?: string; // e.g., 'multiply', 'screen'
-    darkMode?: boolean;
 }
 
 function trackNameToFamily(name: string): string {
@@ -83,11 +83,21 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
 
     const midiDuration = midi.duration || 1;
 
+    // --- Blur filters (reverb tails) ---
+    // We’ll create a few GaussianBlur filters for velocity bands (0–1 range)
+    const blurFilters = softNotes
+        ? Array.from({ length: 5 }, (_, i) => {
+            const v = (i + 1) / 5;
+            const blur = (1 - v) * reverbIntensity * 3; // softer = blurrier
+            return `<filter id="blur${i}" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="${blur}" />
+                      </filter>`;
+        }).join("\n")
+        : "";
+
     const defs = softNotes
         ? `<defs>
-             <filter id="noteBlur" x="-10%" y="-10%" width="120%" height="120%">
-               <feGaussianBlur in="SourceGraphic" stdDeviation="${reverbIntensity}" />
-             </filter>
+             ${blurFilters}
            </defs>`
         : undefined;
 
@@ -112,18 +122,25 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
             let h = baseH * noteScaleFactor * velScale * (softNotes ? softNoteFactor : 1);
             if (h < minNoteHeight) h = minNoteHeight;
 
-            // Determine shape for percussion
             const isPercussion = ["timpani", "cymbals"].includes(familyKey);
             const shape: "rect" | "star" = isPercussion ? "star" : "rect";
 
-            let wFinal = shape === "star" ? h * 1.2 : durationW;
-            let hFinal = shape === "star" ? h * 1.2 : h;
+            let wFinal = shape === "star" ? h * 2 : durationW;
+            let hFinal = shape === "star" ? h * 2 : h;
 
-            // Center percussion vertically
-            const scaleStartFactor = 4;
-            const yFinal = shape === "star" ? ((height / 2) - (hFinal / scaleStartFactor)) : yBase - hFinal / 2;
+            const yFinal = shape === "star" ? height / 2 - hFinal / 2 : yBase - hFinal / 2;
 
-            const starPoints = shape === "star" ? makeStarPoints(x + wFinal / 2, yFinal + hFinal / scaleStartFactor, hFinal / scaleStartFactor) : undefined;
+            const starPoints =
+                shape === "star"
+                    ? makeStarPoints(x + wFinal / 2, yFinal + hFinal / 2, hFinal / 2)
+                    : undefined;
+
+            // Pick blur filter index based on velocity (lower velocity = higher blur)
+            const blurIndex =
+                softNotes && note.velocity !== undefined
+                    ? Math.max(0, 4 - Math.floor(note.velocity * 5))
+                    : 0;
+            const filterId = softNotes ? `url(#blur${blurIndex})` : undefined;
 
             rects.push({
                 x,
@@ -136,6 +153,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
                 ry: softNotes ? h / 2 : 0,
                 shape,
                 starPoints,
+                filter: filterId, // Add per-note filter reference
             });
         }
     }
