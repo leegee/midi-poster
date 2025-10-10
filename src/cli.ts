@@ -19,6 +19,7 @@ async function main() {
     .option('blend-mode', { type: "string", description: 'SVG blend mode (multiply, screen, overlay, etc.)', default: 'normal' })
     .option('background', { type: "string", description: 'Sets a background', default: "#FFF" })
     .option('dark-mode', { type: "boolean", description: 'Sets a dark background', default: false })
+    .option('density-scale-factor', { type: "number", description: "densityScaleFactor", default: 2 })
     .option("velocity-scaled-height", {
       type: "boolean",
       description: "Scale note thickness by note velocity",
@@ -88,6 +89,7 @@ async function main() {
       velocityScaledHeight: argv.velocityScaledHeight,
       minNoteHeight: argv.minNoteHeight,
       blendMode: argv.blendMode,
+      densityScaleFactor: argv.densityScaleFactor,
     });
     renderedMidis.push(rendered);
     xOffset += rendered.width;

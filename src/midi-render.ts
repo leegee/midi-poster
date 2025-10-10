@@ -1,7 +1,8 @@
 import { Midi } from "@tonejs/midi";
 import { NAME_TO_FAMILY, FAMILY_COLOR } from "./colours";
 
-const DENSITY_SCALE_FACTOR = 4;
+const DENSITY_SCALE_FACTOR = 10;
+
 export interface NoteRectRendered {
     x: number;
     y: number;
@@ -41,6 +42,7 @@ export interface RenderOptions {
     minNoteHeight?: number;
     velocityScaledHeight?: boolean;
     blendMode?: string; // e.g., 'multiply', 'screen'
+    densityScaleFactor?: number;
 }
 
 function trackNameToFamily(name: string): string {
@@ -76,6 +78,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         noteScaleFactor = 1,
         minNoteHeight = 1.5,
         velocityScaledHeight = true,
+        densityScaleFactor = DENSITY_SCALE_FACTOR,
     } = options;
 
     const [minPitch, maxPitch] = pitchRange;
@@ -101,9 +104,6 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         const familyKey = trackNameToFamily(trackName);
         const colorHex = FAMILY_COLOR[familyKey] ?? FAMILY_COLOR.default ?? "#ffffff";
         const safeHex = colorHex.replace(/^#/, "").padEnd(6, "0"); // ensure 6 digits
-        const baseR = parseInt(safeHex.slice(0, 2), 16) || 255;
-        const baseG = parseInt(safeHex.slice(2, 4), 16) || 255;
-        const baseB = parseInt(safeHex.slice(4, 6), 16) || 255;
 
         tracks.push({ name: trackName, color: colorHex });
 
@@ -172,7 +172,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         }
 
         const density = localMax / maxDensity;
-        rect.h *= 1 + DENSITY_SCALE_FACTOR * density;
+        rect.h *= 1 + densityScaleFactor * density;
 
         // Boost brightness by increasing luminosity (for HSL) or opacity
         // Assume rect.color is a valid CSS string, e.g., "hsl(...)" or "hsla(...)"
