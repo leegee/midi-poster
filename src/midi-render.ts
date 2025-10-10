@@ -1,7 +1,7 @@
 import { Midi } from "@tonejs/midi";
 import { NAME_TO_FAMILY, FAMILY_COLOR } from "./colours";
 
-const DENSITY_SCALE_FACTOR = 2;
+const DENSITY_SCALE_FACTOR = 4;
 export interface NoteRectRendered {
     x: number;
     y: number;
@@ -101,7 +101,6 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         const familyKey = trackNameToFamily(trackName);
         const colorHex = FAMILY_COLOR[familyKey] ?? FAMILY_COLOR.default ?? "#ffffff";
         const safeHex = colorHex.replace(/^#/, "").padEnd(6, "0"); // ensure 6 digits
-
         const baseR = parseInt(safeHex.slice(0, 2), 16) || 255;
         const baseG = parseInt(safeHex.slice(2, 4), 16) || 255;
         const baseB = parseInt(safeHex.slice(4, 6), 16) || 255;
@@ -131,15 +130,17 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
             const blurIndex = softNotes ? Math.max(0, 4 - Math.floor((note.velocity ?? 0) * 5)) : 0;
             const filterId = softNotes ? `url(#blur${blurIndex})` : undefined;
 
+            // --- Use FAMILY_COLOR directly ---
             rects.push({
                 x, y: yFinal, w: wFinal, h: hFinal,
-                color: `rgb(${baseR},${baseG},${baseB})`,
+                color: FAMILY_COLOR[familyKey] ?? FAMILY_COLOR.default ?? "#ffffff",
                 velocity: note.velocity ?? 0,
                 rx: softNotes ? h / 2 : 0,
                 ry: softNotes ? h / 2 : 0,
                 shape, starPoints, filter: filterId,
             });
         }
+
     }
 
     // --- Density-based enhancement ---
