@@ -1,17 +1,27 @@
-
 export const NAME_TO_FAMILY: [RegExp, string][] = [
+    // Woodwinds
     [/^(flauti|flute)/i, "flute"],
     [/^(oboi|oboe)/i, "oboe"],
     [/^(clarinetti|clarinet)/i, "clarinet"],
     [/^(fagotti|bassoon)/i, "bassoon"],
+
+    // Brass
     [/^(corni|horn)/i, "horn"],
     [/^(trombe|trumpet)/i, "trumpet"],
+    [/^(trombone)/i, "trombone"],
+
+    // Percussion
     [/^(timpani|percussion)/i, "timpani"],
+    [/^(cymbals|sizzle)/i, "cymbals"],
+
+    // Strings
     [/^(violini|violin)/i, "violin"],
     [/^(viole|viola)/i, "viola"],
-    [/^(violoncelli|violoncello|cello)/i, "cello"],
+    [/^(violoncelli|violoncello|cello|celli)/i, "cello"],
     [/^(contrabassi|double bass)/i, "bass"],
     [/^(pizzicato strings)/i, "pizzicato"],
+
+    // Keyboard / Synth
     [/^(synthstrings 1|synth|pad)/i, "synth"],
     [/^(acoustic grand piano|piano)/i, "piano"],
 ];
@@ -36,10 +46,10 @@ export const FAMILY_COLOR: Record<string, string> = {
     pizzicato: "hsl(160,50%,55%)",
 
     // Percussion
-    timpani: "hsl(59, 90%, 50%)",
-    cymbals: "hsl(50,60%,90%)",
+    timpani: "hsla(59, 89.80%, 50.00%, 0.64)",
+    cymbals: "hsla(50, 93.30%, 76.50%, 0.50)",
 
-    // Keyboard / synth
+    // Keyboard / Synth
     piano: "hsl(0,0%,45%)",
     synth: "hsl(270,40%,60%)",
 

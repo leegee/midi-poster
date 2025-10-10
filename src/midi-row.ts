@@ -5,16 +5,19 @@ import { type RenderedMidi, type NoteRectRendered, type TrackInfo } from "./midi
 export type RowOptions = {
     background?: string;
     showTrackNames?: boolean;
-    trackNameHeight?: number;
+    trackNameHeight?: number; // space for track labels
     softNotes?: boolean;
     blur?: number;
-    blendMode?: string;
+    blendMode?: string; // e.g., 'multiply', 'screen'
+    darkMode?: boolean; // black background if true
 };
 
 export function buildSvgRow(midis: RenderedMidi[], opts?: RowOptions): string {
-    const background = opts?.background ?? "#fff";
+    const darkMode = opts?.darkMode ?? false;
+    const background = darkMode ? "#000" : opts?.background ?? "#fff";
     const showTrackNames = opts?.showTrackNames ?? true;
     const trackNameHeight = opts?.trackNameHeight ?? 20;
+    const blendMode = opts?.blendMode ?? "normal";
 
     let xOffset = 0;
     const noteElements: string[] = [];
@@ -37,12 +40,12 @@ export function buildSvgRow(midis: RenderedMidi[], opts?: RowOptions): string {
             const blurFilter = opts?.softNotes ? "filter='url(#noteBlur)'" : "";
 
             if (r.shape === "star" && r.starPoints) {
-                // noteElements.push(`
-                //     <polygon points="${r.starPoints}" fill="${r.color}" fill-opacity="${0.6 + r.velocity * 0.35}" />
-                // `);
+                noteElements.push(`
+                    <polygon points="${r.starPoints}" fill="${r.color}" fill-opacity="${0.6 + r.velocity * 0.35}" />
+                `);
             } else {
                 noteElements.push(`
-                    <g transform="translate(${xOffset}, ${showTrackNames ? trackNameHeight : 0})">
+                    <g transform="translate(${xOffset}, ${showTrackNames ? trackNameHeight : 0})" style="mix-blend-mode:${blendMode}">
                       <rect
                         x="${r.x}"
                         y="${r.y}"
@@ -58,7 +61,6 @@ export function buildSvgRow(midis: RenderedMidi[], opts?: RowOptions): string {
                 `);
             }
         });
-
 
         if (showTrackNames) {
             midi.tracks.forEach((t: TrackInfo) => {

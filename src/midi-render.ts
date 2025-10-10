@@ -1,7 +1,6 @@
 import { Midi } from "@tonejs/midi";
 import { NAME_TO_FAMILY, FAMILY_COLOR } from "./colours";
 
-// --- Rendered MIDI types ---
 export interface NoteRectRendered {
     x: number;
     y: number;
@@ -40,6 +39,7 @@ export interface RenderOptions {
     minNoteHeight?: number;
     velocityScaledHeight?: boolean;
     blendMode?: string; // e.g., 'multiply', 'screen'
+    darkMode?: boolean;
 }
 
 function trackNameToFamily(name: string): string {
@@ -49,7 +49,7 @@ function trackNameToFamily(name: string): string {
     return "default";
 }
 
-function makeStarPoints(cx: number, cy: number, radius: number, spikes = 5): string {
+function makeStarPoints(cx: number, cy: number, radius: number, spikes = 15): string {
     const step = (Math.PI * 2) / (spikes * 2);
     let path = "";
     for (let i = 0; i < spikes * 2; i++) {
@@ -62,7 +62,6 @@ function makeStarPoints(cx: number, cy: number, radius: number, spikes = 5): str
     return path.trim();
 }
 
-// --- Render MIDI ---
 export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMidi {
     const {
         xOffset = 0,
@@ -75,7 +74,6 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         noteScaleFactor = 1,
         minNoteHeight = 1.5,
         velocityScaledHeight = true,
-        blendMode
     } = options;
 
     const [minPitch, maxPitch] = pitchRange;
@@ -118,13 +116,14 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
             const isPercussion = ["timpani", "cymbals"].includes(familyKey);
             const shape: "rect" | "star" = isPercussion ? "star" : "rect";
 
-            let wFinal = shape === "star" ? h * 2 : durationW;
-            let hFinal = shape === "star" ? h * 2 : h;
+            let wFinal = shape === "star" ? h * 1.2 : durationW;
+            let hFinal = shape === "star" ? h * 1.2 : h;
 
             // Center percussion vertically
-            const yFinal = shape === "star" ? height / 2 - hFinal / 2 : yBase - hFinal / 2;
+            const scaleStartFactor = 4;
+            const yFinal = shape === "star" ? ((height / 2) - (hFinal / scaleStartFactor)) : yBase - hFinal / 2;
 
-            const starPoints = shape === "star" ? makeStarPoints(x + wFinal / 2, yFinal + hFinal / 2, hFinal / 2) : undefined;
+            const starPoints = shape === "star" ? makeStarPoints(x + wFinal / 2, yFinal + hFinal / scaleStartFactor, hFinal / scaleStartFactor) : undefined;
 
             rects.push({
                 x,
