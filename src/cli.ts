@@ -7,62 +7,106 @@ import { renderMidi, type RenderedMidi } from "./midi-render";
 import { buildSvgRow, writeSvgAndPng } from "./midi-row";
 import { Midi } from "@tonejs/midi";
 
-async function main() {
-  const argv = yargs(hideBin(process.argv))
-    .usage("Usage: $0 <out.svg> <input1.mid> [input2.mid ...] [options]")
-    .option("width", { type: "number", description: "Desired output width", default: 2048 })
-    .option("height", { type: "number", description: "Desired output height", default: 800 })
-    .option("reverb", { type: "number", description: "Reverb blur intensity", default: 1 })
-    .option("soft-notes", { type: "boolean", description: "Render notes fatter and blurred", default: false })
-    .option("soft-note-factor", { type: "number", description: "Multiplier for note height when softNotes is enabled", default: 3 })
-    .option("blur", { type: "number", description: "Gaussian blur radius for soft notes", default: 2 })
-    .option('blend-mode', { type: "string", description: 'SVG blend mode (multiply, screen, overlay, etc.)', default: 'normal' })
-    .option('background', { type: "string", description: 'Sets a background', default: "#FFF" })
-    .option('dark-mode', { type: "boolean", description: 'Sets a dark background', default: false })
-    .option('density-scale-factor', { type: "number", description: "densityScaleFactor", default: 2 })
-    .option("velocity-scaled-height", {
-      type: "boolean",
-      description: "Scale note thickness by note velocity",
-      default: true
-    })
-    .option("min-note-height", {
-      type: "number",
-      description: "Minimum visual height for a note (px)",
-      default: 1.5
-    })
-    .option("note-scale-factor", {
-      type: "number",
-      description: "Vertical note height scale factor (fatter notes without blur)",
-      default: 1,
-    })
-    .demandCommand(2, "You must provide an output SVG file and at least one MIDI file")
-    .parseSync();
+const TRACK_SKIP_RE = /^(http|by |Copyright|All Rights)/i;
 
-  const [svgOutputPath, ...midiPatterns] = argv._ as string[];
+async function renderSingleOrDouble(midiInstances: Midi[], argv: any, svgOutputPath: string) {
+  const double = argv.double ?? false;
+  const width = argv.width;
+  const height = argv.height;
 
-  // Expand globs (e.g. *.mid)
-  const midiPaths: string[] = [];
-  for (const pattern of midiPatterns) {
-    midiPaths.push(...await glob(pattern));
+  if (!double) {
+    // Single render
+    await renderFinal(midiInstances, argv, svgOutputPath, {
+      softNotes: argv.softNotes,
+      softNoteFactor: argv.softNoteFactor,
+      noteScaleFactor: argv.noteScaleFactor,
+    });
+  } else {
+    // Double render → superimpose layers
+
+    // Layer 1: soft/blurred/larger
+    const baseLayer: RenderedMidi[] = midiInstances.map(midi =>
+      renderMidi(midi, {
+        xOffset: 0,
+        pitchRange: getGlobalPitchRange(midiInstances),
+        width,
+        height,
+        reverbIntensity: argv.reverb,
+        softNotes: true,
+        softNoteFactor: argv.softNoteFactor,
+        noteScaleFactor: argv.noteScaleFactor,
+        velocityScaledHeight: argv.velocityScaledHeight,
+        minNoteHeight: argv.minNoteHeight,
+        blendMode: argv.blendMode,
+        densityScaleFactor: argv.densityScaleFactor,
+      })
+    );
+
+    // Layer 2: crisp/no blur
+    const topLayer: RenderedMidi[] = midiInstances.map(midi =>
+      renderMidi(midi, {
+        xOffset: 0,
+        pitchRange: getGlobalPitchRange(midiInstances),
+        width,
+        height,
+        reverbIntensity: argv.reverb,
+        softNotes: false,
+        softNoteFactor: 1,
+        noteScaleFactor: argv.noteScaleFactor * 0.5,
+        velocityScaledHeight: argv.velocityScaledHeight,
+        minNoteHeight: argv.minNoteHeight,
+        blendMode: argv.blendMode,
+        densityScaleFactor: argv.densityScaleFactor,
+      })
+    );
+
+    // Combine rects from both layers
+    const combined: RenderedMidi = {
+      width,
+      height,
+      blur: argv.blur,
+      rects: [...baseLayer.flatMap(r => r.rects), ...topLayer.flatMap(r => r.rects)],
+      tracks: [...baseLayer.flatMap(r => r.tracks), ...topLayer.flatMap(r => r.tracks)],
+      defs: baseLayer.map(r => r.defs).filter(Boolean).join("\n") || undefined, // only base defs
+    };
+
+    const svg = buildSvgRow([combined], {
+      softNotes: true,  // base layer should apply blur
+      blur: argv.blur,
+      background: argv.background,
+      blendMode: argv.blendMode,
+      topLayerNoBlur: true, // new flag: prevent top layer from being blurred
+    });
+
+    await writeSvgAndPng(svg, svgOutputPath, width, height);
+    console.log(`Double-layer superimposed render complete.`);
   }
+}
 
-  if (midiPaths.length === 0) {
-    console.error("No MIDI files found!");
-    process.exit(1);
-  }
-
-  // Load and parse MIDI files
-  const midiInstances: Midi[] = [];
+// Helper: compute global pitch range across all MIDI tracks
+function getGlobalPitchRange(midiInstances: Midi[]): [number, number] {
   let globalMin = 127;
   let globalMax = 0;
-  const TRACK_SKIP_RE = /^(http|by |Copyright|All Rights)/i;
+  for (const midi of midiInstances) {
+    for (const track of midi.tracks) {
+      if (track.name && track.name.match(TRACK_SKIP_RE)) continue;
+      for (const note of track.notes) {
+        globalMin = Math.min(globalMin, note.midi);
+        globalMax = Math.max(globalMax, note.midi);
+      }
+    }
+  }
+  return [globalMin - 2, globalMax + 2];
+}
 
-  for (const p of midiPaths) {
-    const buf = fs.readFileSync(p);
-    const midi = new Midi(buf.buffer as any);
-    midiInstances.push(midi);
+async function renderFinal(midiInstances: Midi[], argv: any, outputPath: string, opts: { softNotes: boolean; softNoteFactor: number; noteScaleFactor: number; }) {
+  let xOffset = 0;
+  const renderedMidis: RenderedMidi[] = [];
 
-    // Update global pitch range
+  // Compute global pitch range
+  let globalMin = 127;
+  let globalMax = 0;
+  for (const midi of midiInstances) {
     for (const track of midi.tracks) {
       if (track.name && track.name.match(TRACK_SKIP_RE)) continue;
       for (const note of track.notes) {
@@ -72,10 +116,6 @@ async function main() {
     }
   }
 
-  // Render each MIDI with same pitch range
-  const renderedMidis: RenderedMidi[] = [];
-  let xOffset = 0;
-
   for (const midi of midiInstances) {
     const rendered = renderMidi(midi, {
       xOffset,
@@ -83,9 +123,9 @@ async function main() {
       width: argv.width,
       height: argv.height,
       reverbIntensity: argv.reverb,
-      softNotes: argv.softNotes,
-      softNoteFactor: argv.softNoteFactor,
-      noteScaleFactor: argv.noteScaleFactor,
+      softNotes: opts.softNotes,
+      softNoteFactor: opts.softNoteFactor,
+      noteScaleFactor: opts.noteScaleFactor,
       velocityScaledHeight: argv.velocityScaledHeight,
       minNoteHeight: argv.minNoteHeight,
       blendMode: argv.blendMode,
@@ -96,16 +136,61 @@ async function main() {
   }
 
   const svg = buildSvgRow(renderedMidis, {
-    softNotes: argv.softNotes,
+    softNotes: opts.softNotes,
     blur: argv.blur,
     background: argv.background,
     blendMode: argv.blendMode,
   });
 
-  await writeSvgAndPng(svg, svgOutputPath || argv.blendMode + "-out.svg", argv.width, argv.height);
+  await writeSvgAndPng(svg, outputPath, argv.width, argv.height);
 }
 
-main().catch((err) => {
+// Main CLI
+async function main() {
+  const argv = yargs(hideBin(process.argv))
+    .usage("Usage: $0 <out.svg> <input1.mid> [input2.mid ...] [options]")
+    .option("width", { type: "number", default: 2048 })
+    .option("height", { type: "number", default: 800 })
+    .option("reverb", { type: "number", default: 1 })
+    .option("soft-notes", { type: "boolean", default: false })
+    .option("soft-note-factor", { type: "number", default: 3 })
+    .option("blur", { type: "number", default: 2 })
+    .option('blend-mode', { type: "string", default: 'normal' })
+    .option('background', { type: "string", default: "#FFF" })
+    .option('dark-mode', { type: "boolean", default: false })
+    .option('density-scale-factor', { type: "number", default: 2 })
+    .option("velocity-scaled-height", { type: "boolean", default: true })
+    .option("min-note-height", { type: "number", default: 1.5 })
+    .option("note-scale-factor", { type: "number", default: 1 })
+    .option("double", { type: "boolean", description: "Render double layers for superimposed PNG", default: false })
+    .demandCommand(2, "You must provide an output SVG file and at least one MIDI file")
+    .parseSync();
+
+  const [svgOutputPath, ...midiPatterns] = argv._ as string[];
+
+  // Expand globs
+  const midiPaths: string[] = [];
+  for (const pattern of midiPatterns) {
+    midiPaths.push(...await glob(pattern));
+  }
+
+  if (midiPaths.length === 0) {
+    console.error("No MIDI files found!");
+    process.exit(1);
+  }
+
+  // Load MIDI
+  const midiInstances: Midi[] = [];
+  for (const p of midiPaths) {
+    const buf = fs.readFileSync(p);
+    midiInstances.push(new Midi(buf.buffer as any));
+  }
+
+  // Render (single or double)
+  await renderSingleOrDouble(midiInstances, argv, svgOutputPath || 'out.svg');
+}
+
+main().catch(err => {
   console.error(err);
   process.exit(1);
 });

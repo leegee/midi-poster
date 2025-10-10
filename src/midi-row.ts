@@ -13,14 +13,14 @@ export type RowOptions = {
 
 export async function writeSvgAndPng(svg: string, svgOutPath: string, width = 2048, height = 780) {
     fs.writeFileSync(svgOutPath, svg);
-    console.log("Wrote", svgOutPath);
+    console.log(new Date().toLocaleTimeString(), "Wrote", svgOutPath);
 
     const pngOutputPath = svgOutPath.replace(/\.svg$/i, ".png");
     await sharp(Buffer.from(svg))
         .resize({ width, height })
         .png()
         .toFile(pngOutputPath);
-    console.log("Wrote", pngOutputPath);
+    console.log(new Date().toLocaleTimeString(), "Wrote", pngOutputPath);
 }
 
 export function buildSvgRow(
@@ -34,9 +34,10 @@ export function buildSvgRow(
         targetWidth?: number;
         targetHeight?: number;
         densityScale?: number;
+        topLayerNoBlur?: boolean; // new flag
     } = {}
 ): string {
-    const { blendMode, background = "#FFF", targetWidth = 2048, targetHeight = 780 } = options;
+    const { blendMode, background = "#FFF", targetWidth = 2048, targetHeight = 780, topLayerNoBlur = false } = options;
     const fgBlend = blendMode ? `mix-blend-mode:${blendMode};` : "";
 
     const totalWidth = renderedMidis.reduce((acc, r) => acc + r.width, 0);
@@ -44,14 +45,19 @@ export function buildSvgRow(
     const scaleX = targetWidth / totalWidth;
     const scaleY = targetHeight / maxHeight;
 
-    const combinedDefs = renderedMidis.map(r => r.defs).filter(Boolean).join("\n");
+    // Only include defs from layers that actually need blur
+    const combinedDefs = renderedMidis
+        .map(r => (!topLayerNoBlur ? r.defs : r.defs && !topLayerNoBlur ? r.defs : undefined))
+        .filter(Boolean)
+        .join("\n");
 
     let content = "";
     let xOffset = 0;
 
     for (const midi of renderedMidis) {
         for (const rect of midi.rects) {
-            const filter = rect.filter ? `filter="${rect.filter}"` : "";
+            // Remove filter for top layer if flag is set
+            const filter = topLayerNoBlur ? "" : rect.filter ? `filter="${rect.filter}"` : "";
             const newHeight = rect.h;
             const fillOpacity = Math.min(1, 0.9 - (1 - rect.velocity) * 0.5);
 

@@ -46,8 +46,8 @@ export const FAMILY_COLOR: Record<string, string> = {
     pizzicato: "hsla(120, 60%, 55%, 0.9)",
 
     // Percussion
-    timpani: "hsla(59, 89.80%, 50.00%, 0.64)",
-    cymbals: "hsla(50, 93.30%, 76.50%, 0.50)",
+    timpani: "hsla(59, 59.80%, 30.00%, 0.64)",
+    cymbals: "hsla(50, 93.30%, 86.50%, 0.50)",
 
     // Keyboard / Synth
     piano: "hsl(0,0%,45%)",
