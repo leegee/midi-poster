@@ -13,8 +13,7 @@ export type RowOptions = {
     trackNameHeight?: number; // space for track labels
     softNotes?: boolean;
     blur?: number;
-    noteScaleFactor?: number; // for visual consistency if applied at render
-    blendMode?: string;
+    blendMode?: string; // e.g., 'multiply', 'screen', 'overlay'
 };
 
 export function buildSvgRow(midis: RenderedMidi[], opts?: RowOptions): string {
@@ -42,7 +41,8 @@ export function buildSvgRow(midis: RenderedMidi[], opts?: RowOptions): string {
 
         // Notes
         midi.rects.forEach((r: NoteRectRendered) => {
-            const blurFilter = opts?.softNotes ? "filter='url(#noteBlur)'" : "";
+            const blurFilter = opts?.softNotes ? `filter="url(#noteBlur)"` : "";
+            const blend = opts?.blendMode ? `style="mix-blend-mode: ${opts.blendMode}"` : "";
             noteElements.push(`
         <g transform="translate(${xOffset}, ${showTrackNames ? trackNameHeight : 0})">
           <rect
@@ -55,6 +55,7 @@ export function buildSvgRow(midis: RenderedMidi[], opts?: RowOptions): string {
             rx="${r.rx ?? r.h / 2}"
             ry="${r.ry ?? r.h / 2}"
             ${blurFilter}
+            ${blend}
           />
         </g>
       `);

@@ -13,21 +13,21 @@ async function main() {
     .option("width", { type: "number", description: "Desired output width", default: 2048 })
     .option("height", { type: "number", description: "Desired output height", default: 800 })
     .option("reverb", { type: "number", description: "Reverb blur intensity", default: 1 })
-    .option("softNotes", { type: "boolean", description: "Render notes fatter and blurred", default: false })
-    .option("softNoteFactor", { type: "number", description: "Multiplier for note height when softNotes is enabled", default: 3 })
+    .option("soft-notes", { type: "boolean", description: "Render notes fatter and blurred", default: false })
+    .option("soft-note-factor", { type: "number", description: "Multiplier for note height when softNotes is enabled", default: 3 })
     .option("blur", { type: "number", description: "Gaussian blur radius for soft notes", default: 2 })
     .option('blend-mode', { type: "string", description: 'SVG blend mode (multiply, screen, overlay, etc.)', default: 'normal' })
-    .option("velocityScaledHeight", {
+    .option("velocity-scaled-height", {
       type: "boolean",
       description: "Scale note thickness by note velocity",
       default: true
     })
-    .option("minNoteHeight", {
+    .option("min-note-height", {
       type: "number",
       description: "Minimum visual height for a note (px)",
       default: 1.5
     })
-    .option("noteScaleFactor", {
+    .option("note-scale-factor", {
       type: "number",
       description: "Vertical note height scale factor (fatter notes without blur)",
       default: 1,
