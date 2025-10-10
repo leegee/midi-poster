@@ -1,17 +1,8 @@
 import sharp from "sharp";
 import fs from "node:fs";
-import { type RenderedMidi, type NoteRectRendered } from "./midi-render";
+import { type RenderedMidi } from "./midi-render";
 
-export type RowOptions = {
-    background?: string;
-    showTrackNames?: boolean;
-    trackNameHeight?: number;
-    softNotes?: boolean;
-    blur?: number;
-    blendMode?: string;
-};
-
-export async function writeSvgAndPng(svg: string, svgOutPath: string, width = 2048, height = 780) {
+export async function writeSvgAndPng(svg: string, svgOutPath: string, width: number, height: number) {
     fs.writeFileSync(svgOutPath, svg);
     console.log(new Date().toLocaleTimeString(), "Wrote", svgOutPath);
 
@@ -33,21 +24,18 @@ export function buildSvgRow(
         background?: string;
         targetWidth?: number;
         targetHeight?: number;
-        densityScale?: number;
-        topLayerNoBlur?: boolean; // new flag
+        topLayerNoBlur?: boolean;
     } = {}
-): string {
+) {
     const { blendMode, background = "#FFF", targetWidth = 2048, targetHeight = 780, topLayerNoBlur = false } = options;
     const fgBlend = blendMode ? `mix-blend-mode:${blendMode};` : "";
 
-    const totalWidth = renderedMidis.reduce((acc, r) => acc + r.width, 0);
-    const maxHeight = Math.max(...renderedMidis.map(r => r.height));
-    const scaleX = targetWidth / totalWidth;
-    const scaleY = targetHeight / maxHeight;
+    const totalMidiWidth = renderedMidis.reduce((acc, r) => acc + r.width, 0);
+    const totalHeight = Math.max(...renderedMidis.map(r => r.height));
 
-    // Only include defs from layers that actually need blur
+    // Combine defs
     const combinedDefs = renderedMidis
-        .map(r => (!topLayerNoBlur ? r.defs : r.defs && !topLayerNoBlur ? r.defs : undefined))
+        .map(r => (!topLayerNoBlur ? r.defs : undefined))
         .filter(Boolean)
         .join("\n");
 
@@ -56,41 +44,35 @@ export function buildSvgRow(
 
     for (const midi of renderedMidis) {
         for (const rect of midi.rects) {
-            // Remove filter for top layer if flag is set
             const filter = topLayerNoBlur ? "" : rect.filter ? `filter="${rect.filter}"` : "";
-            const newHeight = rect.h;
-            const fillOpacity = Math.min(1, 0.9 - (1 - rect.velocity) * 0.5);
-
             if (rect.shape === "star" && rect.starPoints) {
-                const scaledPoints = rect.starPoints
-                    .split(" ")
-                    .map(p => {
-                        const [xStr, yStr] = p.split(",");
-                        const x = Number(xStr ?? 0);
-                        const y = Number(yStr ?? 0);
-                        return `${x * scaleX},${y * scaleY}`;
-                    })
-                    .join(" ");
-                content += `<polygon points="${scaledPoints}" fill="${rect.color}" fill-opacity="${fillOpacity}" ${filter} style="${fgBlend}"/>`;
+                content += `<polygon points="${rect.starPoints}" fill="${rect.color}" fill-opacity="1" ${filter} style="${fgBlend}"/>`;
             } else {
                 content += `<rect 
-    x="${(rect.x + xOffset) * scaleX}" 
-    y="${(rect.y + rect.h / 2 - newHeight / 2) * scaleY}" 
-    width="${rect.w * scaleX}" 
-    height="${newHeight * scaleY}" 
-    fill="${rect.color}" fill-opacity="${fillOpacity}" 
-    ${filter} 
-    rx="${(rect.rx ?? 0) * scaleX}" ry="${(rect.ry ?? 0) * scaleY}" 
-    style="${fgBlend}"
+  x="${rect.x}" 
+  y="${rect.y}" 
+  width="${rect.w}" 
+  height="${rect.h}" 
+  fill="${rect.color}" 
+  ${filter} 
+  rx="${rect.rx ?? 0}" ry="${rect.ry ?? 0}" 
+  style="${fgBlend}"
 />`;
             }
         }
         xOffset += midi.width;
     }
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${targetWidth}" height="${targetHeight}" viewBox="0 0 ${targetWidth} ${targetHeight}">
+    return {
+        totalMidiWidth: targetWidth,
+        totalHeight: targetHeight,
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" 
+  width="${targetWidth}" 
+  height="${targetHeight}" 
+  viewBox="0 0 ${totalMidiWidth} ${totalHeight}">
   <rect width="100%" height="100%" fill="${background}" />
   ${combinedDefs}
   ${content}
-</svg>`;
+</svg>`
+    };
 }

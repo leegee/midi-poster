@@ -14,7 +14,7 @@ export interface NoteRectRendered {
     rx?: number;
     ry?: number;
     shape?: "rect" | "star";
-    starPoints?: string; // SVG polygon points if shape === "star"
+    starPoints?: string;
     filter?: string;
 }
 
@@ -37,18 +37,18 @@ export interface RenderOptions {
     pitchRange?: [number, number];
     width?: number;
     height?: number;
+    targetWidth?: number;
+    targetHeight?: number;
     reverbIntensity?: number;
     softNotes?: boolean;
     softNoteFactor?: number;
     noteScaleFactor?: number;
     minNoteHeight?: number;
     velocityScaledHeight?: boolean;
-    blendMode?: string; // e.g., 'multiply', 'screen'
+    blendMode?: string;
     densityScaleFactor?: number;
     blur?: number;
 }
-
-const TRACK_SKIP_RE = /^(http|by |Copyright|All Rights)/i;
 
 function trackNameToFamily(name: string): string {
     for (const [regex, family] of NAME_TO_FAMILY) {
@@ -72,10 +72,12 @@ function makeStarPoints(cx: number, cy: number, radius: number, spikes = 12): st
 
 export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMidi {
     const {
-        xOffset = 0,
-        pitchRange = [0, 127],
         width = 1000,
         height = 300,
+        targetWidth = width,
+        targetHeight = height,
+        xOffset = 0,
+        pitchRange = [0, 127],
         reverbIntensity = 1,
         softNotes = false,
         softNoteFactor = 3,
@@ -86,24 +88,27 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         blur = 4,
     } = options;
 
+    const scaleX = targetWidth / width;
+    const scaleY = targetHeight / height;
+
     const [minPitch, maxPitch] = pitchRange;
     const rects: NoteRectRendered[] = [];
     const tracks: TrackInfo[] = [];
     const midiDuration = midi.duration || 1;
 
-    // Blur filters
+    // Blur defs
     const blurFilters = softNotes
         ? Array.from({ length: 5 }, (_, i) => {
             const v = (i + 1) / 5;
             const useBlur = (1 - v) * reverbIntensity * blur;
             return `<filter id="blur${i}" x="-20%" y="-20%" width="140%" height="140%">
-                        <feGaussianBlur in="SourceGraphic" stdDeviation="${useBlur}" />
-                    </filter>`;
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="${useBlur}" />
+                </filter>`;
         }).join("\n")
         : "";
     const defs = softNotes ? `<defs>\n${blurFilters}\n</defs>` : undefined;
 
-    // Precompute density map
+    // Collect temporary rects for density
     const tempRects: { note: any; trackFamily: string; x: number; yBase: number; velScale: number; hBase: number; wBase: number }[] = [];
 
     for (const track of midi.tracks) {
@@ -117,7 +122,6 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
             const x = xOffset + (note.time / midiDuration) * width;
             const yBase = ((maxPitch - note.midi) / (maxPitch - minPitch)) * height;
             const durationW = (note.duration / midiDuration) * width;
-
             const velScale = velocityScaledHeight ? 0.5 + (note.velocity ?? 0) * 0.5 : 1;
             let h = 2 * noteScaleFactor * velScale * (softNotes ? softNoteFactor : 1);
             if (h < minNoteHeight) h = minNoteHeight;
@@ -126,7 +130,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         }
     }
 
-    // Density map
+    // Build density map
     const timeStep = width / 2000;
     const pitchStep = 1;
     const densityMap = new Map<string, number>();
@@ -140,26 +144,23 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
             densityMap.set(key, (densityMap.get(key) ?? 0) + 1);
         }
     }
-
     const maxDensity = Math.max(...densityMap.values(), 1);
 
-    // Now finalize rects with density applied first
+    // Finalize rects with scaling applied
     for (const r of tempRects) {
         const start = Math.floor(r.x / timeStep);
         const end = Math.floor((r.x + r.wBase) / timeStep);
         const pitch = Math.floor(r.yBase / pitchStep);
-
         let localMax = 0;
         for (let t = start; t <= end; t++) {
             const key = `${t}:${pitch}`;
             localMax = Math.max(localMax, densityMap.get(key) ?? 0);
         }
-
         const density = localMax / maxDensity;
 
         const hFinal = r.hBase * (1 + densityScaleFactor * density);
-        const wFinal = ["cymbals"].includes(r.trackFamily) ? hFinal * STAR_SCALE : r.wBase;
         const shape: "rect" | "star" = ["cymbals"].includes(r.trackFamily) ? "star" : "rect";
+        const wFinal = shape === "star" ? hFinal * STAR_SCALE : r.wBase;
 
         // Compute yFinal
         let yFinal: number;
@@ -175,14 +176,19 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
             yFinal = r.yBase - hFinal / 2;
         }
 
+        // Apply scaling
+        const xScaled = r.x * scaleX;
+        const yScaled = yFinal * scaleY;
+        const wScaled = wFinal * scaleX;
+        const hScaled = hFinal * scaleY;
+
         const starPoints = shape === "star"
-            ? makeStarPoints(r.x + wFinal / 2, yFinal + hFinal / 2, hFinal / 2)
+            ? makeStarPoints(xScaled + wScaled / 2, yScaled + hScaled / 2, hScaled / 2)
             : undefined;
 
         const blurIndex = softNotes ? Math.max(0, 4 - Math.floor((r.note.velocity ?? 0) * 5)) : 0;
         const filterId = softNotes ? `url(#blur${blurIndex})` : undefined;
 
-        // Apply brightness boost based on density
         let color = FAMILY_COLOR[r.trackFamily] ?? FAMILY_COLOR.default ?? "#ffffff";
         if (color.startsWith("hsl")) {
             color = color.replace(/(\d+)%\)$/i, (match, l) => `${Math.min(100, +l + (100 - +l) * 0.3 * density)}% )`);
@@ -193,19 +199,19 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         }
 
         rects.push({
-            x: r.x,
-            y: yFinal,
-            w: wFinal,
-            h: hFinal,
+            x: xScaled,
+            y: yScaled,
+            w: wScaled,
+            h: hScaled,
             color,
             velocity: r.note.velocity ?? 0,
-            rx: softNotes ? hFinal / 2 : 0,
-            ry: softNotes ? hFinal / 2 : 0,
+            rx: softNotes ? hScaled / 2 : 0,
+            ry: softNotes ? hScaled / 2 : 0,
             shape,
             starPoints,
             filter: filterId,
         });
     }
 
-    return { width, height, rects, tracks, defs };
+    return { width: targetWidth, height: targetHeight, rects, tracks, defs };
 }
