@@ -4,7 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "demo": "bun ./src/midi-to-svg.ts \"./midi/beethoven_symphony_5_1_(c)galimberti.mid\" beethoven_symphony_5_1.svg"
+    "demo:all": "bun ./src/cli.ts  beethoven_symphony_5_1.svg \"midi/beethoven_symphony_5*.mid\"",
+    "demo:1": "bun ./src/cli.ts  beethoven_symphony_5_1.svg \"midi/beethoven_symphony_5_1_\\(c\\)galimberti.mid\""
   },
   "devDependencies": {
     "@types/bun": "latest"
@@ -14,6 +15,7 @@
   },
   "dependencies": {
     "@tonejs/midi": "^2.0.28",
+    "fast-glob": "^3.3.3",
     "sharp": "^0.34.4"
   }
 }
