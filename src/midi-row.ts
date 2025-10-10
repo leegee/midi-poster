@@ -1,14 +1,14 @@
 import sharp from "sharp";
 import fs from "node:fs";
-import { type RenderedMidi, type NoteRectRendered, type TrackInfo } from "./midi-render";
+import { type RenderedMidi, type NoteRectRendered } from "./midi-render";
 
 export type RowOptions = {
     background?: string;
     showTrackNames?: boolean;
-    trackNameHeight?: number; // space for track labels
+    trackNameHeight?: number;
     softNotes?: boolean;
     blur?: number;
-    blendMode?: string; // e.g., 'multiply', 'screen'
+    blendMode?: string;
 };
 
 export async function writeSvgAndPng(svg: string, svgOutPath: string, width = 2048, height = 780) {
@@ -17,7 +17,7 @@ export async function writeSvgAndPng(svg: string, svgOutPath: string, width = 20
 
     const pngOutputPath = svgOutPath.replace(/\.svg$/i, ".png");
     await sharp(Buffer.from(svg))
-        .resize({ width })
+        .resize({ width, height })
         .png()
         .toFile(pngOutputPath);
     console.log("Wrote", pngOutputPath);
@@ -31,47 +31,60 @@ export function buildSvgRow(
         noteScaleFactor?: number;
         blendMode?: string;
         background?: string;
+        targetWidth?: number;
+        targetHeight?: number;
+        densityScale?: number;
     } = {}
 ): string {
-    const { blendMode, background = "#FFF" } = options;
-
-    const bgColor = background ?? "white";
+    const { blendMode, background = "#FFF", targetWidth = 2048, targetHeight = 780 } = options;
     const fgBlend = blendMode ? `mix-blend-mode:${blendMode};` : "";
 
-    // SVG header setup
     const totalWidth = renderedMidis.reduce((acc, r) => acc + r.width, 0);
     const maxHeight = Math.max(...renderedMidis.map(r => r.height));
+    const scaleX = targetWidth / totalWidth;
+    const scaleY = targetHeight / maxHeight;
 
-    // Combine all <defs> blocks into one
-    const combinedDefs = renderedMidis
-        .map(r => r.defs)
-        .filter(Boolean)
-        .join("\n");
+    const combinedDefs = renderedMidis.map(r => r.defs).filter(Boolean).join("\n");
 
-    // Draw all note shapes
     let content = "";
     let xOffset = 0;
+
     for (const midi of renderedMidis) {
         for (const rect of midi.rects) {
             const filter = rect.filter ? `filter="${rect.filter}"` : "";
-            const fillOpacity = 0.9 - (1 - rect.velocity) * 0.5; // softer = more transparent
+            const newHeight = rect.h;
+            const fillOpacity = Math.min(1, 0.9 - (1 - rect.velocity) * 0.5);
 
             if (rect.shape === "star" && rect.starPoints) {
-                content += `<polygon points="${rect.starPoints}" fill="${rect.color}" fill-opacity="${fillOpacity}" ${filter} style="${fgBlend}"/>`;
+                const scaledPoints = rect.starPoints
+                    .split(" ")
+                    .map(p => {
+                        const [xStr, yStr] = p.split(",");
+                        const x = Number(xStr ?? 0);
+                        const y = Number(yStr ?? 0);
+                        return `${x * scaleX},${y * scaleY}`;
+                    })
+                    .join(" ");
+                content += `<polygon points="${scaledPoints}" fill="${rect.color}" fill-opacity="${fillOpacity}" ${filter} style="${fgBlend}"/>`;
             } else {
-                content += `<rect x="${rect.x + xOffset}" y="${rect.y}" width="${rect.w}" height="${rect.h}"
-                    fill="${rect.color}" fill-opacity="${fillOpacity}" ${filter} rx="${rect.rx ?? 0}" ry="${rect.ry ?? 0}"
-                    style="${fgBlend}"/>`;
+                content += `<rect 
+    x="${(rect.x + xOffset) * scaleX}" 
+    y="${(rect.y + rect.h / 2 - newHeight / 2) * scaleY}" 
+    width="${rect.w * scaleX}" 
+    height="${newHeight * scaleY}" 
+    fill="${rect.color}" fill-opacity="${fillOpacity}" 
+    ${filter} 
+    rx="${(rect.rx ?? 0) * scaleX}" ry="${(rect.ry ?? 0) * scaleY}" 
+    style="${fgBlend}"
+/>`;
             }
         }
         xOffset += midi.width;
     }
 
-    // Assemble SVG
-    return `
-<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${maxHeight}" viewBox="0 0 ${totalWidth} ${maxHeight}">
-  <rect width="100%" height="100%" fill="${bgColor}" />
-  ${combinedDefs ? combinedDefs : ""}
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${targetWidth}" height="${targetHeight}" viewBox="0 0 ${targetWidth} ${targetHeight}">
+  <rect width="100%" height="100%" fill="${background}" />
+  ${combinedDefs}
   ${content}
 </svg>`;
 }
