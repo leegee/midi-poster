@@ -48,6 +48,8 @@ export interface RenderOptions {
     blur?: number;
 }
 
+const TRACK_SKIP_RE = /^(http|by |Copyright|All Rights)/i;
+
 function trackNameToFamily(name: string): string {
     for (const [regex, family] of NAME_TO_FAMILY) {
         if (regex.test(name)) return family;
@@ -82,7 +84,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         velocityScaledHeight = true,
         densityScaleFactor = DENSITY_SCALE_FACTOR,
         blur = 4,
-    }: RenderOptions = options;
+    } = options;
 
     const [minPitch, maxPitch] = pitchRange;
     const rects: NoteRectRendered[] = [];
@@ -101,7 +103,9 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         : "";
     const defs = softNotes ? `<defs>\n${blurFilters}\n</defs>` : undefined;
 
-    // Render notes
+    // Precompute density map
+    const tempRects: { note: any; trackFamily: string; x: number; yBase: number; velScale: number; hBase: number; wBase: number }[] = [];
+
     for (const track of midi.tracks) {
         const trackName = track.name || track.instrument.name || "";
         const familyKey = trackNameToFamily(trackName);
@@ -109,96 +113,98 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
 
         tracks.push({ name: trackName, color });
 
-        // Determine timpani min/max if needed
-        let minT = 0, maxT = 0;
-        if (familyKey === "timpani") {
-            const timpaniNotes = track.notes.filter(n => n.midi >= 0);
-            minT = Math.min(...timpaniNotes.map(n => n.midi));
-            maxT = Math.max(...timpaniNotes.map(n => n.midi));
-        }
-
         for (const note of track.notes) {
             const x = xOffset + (note.time / midiDuration) * width;
-            const noteCenterY = ((maxPitch - note.midi) / (maxPitch - minPitch)) * height;
+            const yBase = ((maxPitch - note.midi) / (maxPitch - minPitch)) * height;
             const durationW = (note.duration / midiDuration) * width;
 
             const velScale = velocityScaledHeight ? 0.5 + (note.velocity ?? 0) * 0.5 : 1;
             let h = 2 * noteScaleFactor * velScale * (softNotes ? softNoteFactor : 1);
             if (h < minNoteHeight) h = minNoteHeight;
 
-            const shape: "rect" | "star" = ["cymbals"].includes(familyKey) ? "star" : "rect";
-            const wFinal = shape === "star" ? h * STAR_SCALE : durationW;
-            const hFinal = shape === "star" ? h * STAR_SCALE : h;
-
-            // Correct y placement
-            let yFinal: number;
-            if (familyKey === "timpani") {
-                const bottomRange = height * 0.2;
-                const centerY = ((maxT - note.midi) / (maxT - minT)) * bottomRange + (height - bottomRange);
-                yFinal = centerY - hFinal / 2;
-            } else if (shape === "star") {
-                yFinal = height / 2 - hFinal / 2;
-            } else {
-                yFinal = noteCenterY - hFinal / 2; // centered for velocity/softNotes
-            }
-
-            const starPoints = shape === "star"
-                ? makeStarPoints(x + wFinal / 2, yFinal + hFinal / 2, hFinal / 2)
-                : undefined;
-
-            const blurIndex = softNotes ? Math.max(0, 4 - Math.floor((note.velocity ?? 0) * 5)) : 0;
-            const filterId = softNotes ? `url(#blur${blurIndex})` : undefined;
-
-            rects.push({
-                x, y: yFinal, w: wFinal, h: hFinal,
-                color: FAMILY_COLOR[familyKey] ?? FAMILY_COLOR.default ?? "#ffffff",
-                velocity: note.velocity ?? 0,
-                rx: softNotes ? h / 2 : 0,
-                ry: softNotes ? h / 2 : 0,
-                shape, starPoints,
-                filter: filterId,
-            });
+            tempRects.push({ note, trackFamily: familyKey, x, yBase, velScale, hBase: h, wBase: durationW });
         }
     }
 
-    // Optional: density-based enhancement
+    // Density map
     const timeStep = width / 2000;
     const pitchStep = 1;
     const densityMap = new Map<string, number>();
-    for (const rect of rects) {
-        const start = Math.floor(rect.x / timeStep);
-        const end = Math.floor((rect.x + rect.w) / timeStep);
-        const pitch = Math.floor(rect.y / pitchStep);
+
+    for (const r of tempRects) {
+        const start = Math.floor(r.x / timeStep);
+        const end = Math.floor((r.x + r.wBase) / timeStep);
+        const pitch = Math.floor(r.yBase / pitchStep);
         for (let t = start; t <= end; t++) {
             const key = `${t}:${pitch}`;
             densityMap.set(key, (densityMap.get(key) ?? 0) + 1);
         }
     }
+
     const maxDensity = Math.max(...densityMap.values(), 1);
 
-    for (const rect of rects) {
-        const start = Math.floor(rect.x / timeStep);
-        const end = Math.floor((rect.x + rect.w) / timeStep);
-        const pitch = Math.floor(rect.y / pitchStep);
+    // Now finalize rects with density applied first
+    for (const r of tempRects) {
+        const start = Math.floor(r.x / timeStep);
+        const end = Math.floor((r.x + r.wBase) / timeStep);
+        const pitch = Math.floor(r.yBase / pitchStep);
+
         let localMax = 0;
         for (let t = start; t <= end; t++) {
             const key = `${t}:${pitch}`;
             localMax = Math.max(localMax, densityMap.get(key) ?? 0);
         }
-        const density = localMax / maxDensity;
-        rect.h *= 1 + densityScaleFactor * density;
 
-        // Optionally boost brightness
-        if (rect.color.startsWith("hsl")) {
-            rect.color = rect.color.replace(/(\d+)%\)$/i, (match, l) => `${Math.min(100, +l + (100 - +l) * 0.3 * density)}% )`);
-        } else if (rect.color.startsWith("rgb")) {
-            const rgbMatch = rect.color.match(/\d+/g)?.map(Number) ?? [];
-            const r = rgbMatch[0] ?? 255;
-            const g = rgbMatch[1] ?? 255;
-            const b = rgbMatch[2] ?? 255;
-            const boosted = (v: number) => Math.min(255, Math.floor(v + (255 - v) * 0.3 * density));
-            rect.color = `rgb(${boosted(r)},${boosted(g)},${boosted(b)})`;
+        const density = localMax / maxDensity;
+
+        const hFinal = r.hBase * (1 + densityScaleFactor * density);
+        const wFinal = ["cymbals"].includes(r.trackFamily) ? hFinal * STAR_SCALE : r.wBase;
+        const shape: "rect" | "star" = ["cymbals"].includes(r.trackFamily) ? "star" : "rect";
+
+        // Compute yFinal
+        let yFinal: number;
+        if (r.trackFamily === "timpani") {
+            const timpaniNotes = tempRects.filter(t => t.trackFamily === "timpani");
+            const minT = Math.min(...timpaniNotes.map(n => n.note.midi));
+            const maxT = Math.max(...timpaniNotes.map(n => n.note.midi));
+            const bottomRange = height * 0.2;
+            yFinal = ((maxT - r.note.midi) / (maxT - minT)) * bottomRange + (height - bottomRange);
+        } else if (shape === "star") {
+            yFinal = height / 2 - hFinal / 2;
+        } else {
+            yFinal = r.yBase - hFinal / 2;
         }
+
+        const starPoints = shape === "star"
+            ? makeStarPoints(r.x + wFinal / 2, yFinal + hFinal / 2, hFinal / 2)
+            : undefined;
+
+        const blurIndex = softNotes ? Math.max(0, 4 - Math.floor((r.note.velocity ?? 0) * 5)) : 0;
+        const filterId = softNotes ? `url(#blur${blurIndex})` : undefined;
+
+        // Apply brightness boost based on density
+        let color = FAMILY_COLOR[r.trackFamily] ?? FAMILY_COLOR.default ?? "#ffffff";
+        if (color.startsWith("hsl")) {
+            color = color.replace(/(\d+)%\)$/i, (match, l) => `${Math.min(100, +l + (100 - +l) * 0.3 * density)}% )`);
+        } else if (color.startsWith("rgb")) {
+            const rgbMatch = color.match(/\d+/g)?.map(Number) ?? [];
+            const boosted = (v: number) => Math.min(255, Math.floor(v + (255 - v) * 0.3 * density));
+            color = `rgb(${boosted(rgbMatch[0] || 0)},${boosted(rgbMatch[1] || 0)},${boosted(rgbMatch[2] || 0)})`;
+        }
+
+        rects.push({
+            x: r.x,
+            y: yFinal,
+            w: wFinal,
+            h: hFinal,
+            color,
+            velocity: r.note.velocity ?? 0,
+            rx: softNotes ? hFinal / 2 : 0,
+            ry: softNotes ? hFinal / 2 : 0,
+            shape,
+            starPoints,
+            filter: filterId,
+        });
     }
 
     return { width, height, rects, tracks, defs };
