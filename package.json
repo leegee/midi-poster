@@ -4,11 +4,12 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "demo:all": "bun ./src/cli.ts  beethoven_symphony_5_1.svg \"midi/beethoven_symphony_5*.mid\"",
-    "demo:1": "bun ./src/cli.ts  beethoven_symphony_5_1.svg \"midi/beethoven_symphony_5_1_\\(c\\)galimberti.mid\""
+    "demo:all": "bun ./src/cli.ts beethoven_symphony_5_1.svg \"midi/beethoven_symphony_5*.mid\"",
+    "demo:1": "bun ./src/cli.ts beethoven_symphony_5_1.svg \"midi/beethoven_symphony_5_1_\\(c\\)galimberti.mid\""
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/yargs": "^17.0.33"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -16,6 +17,7 @@
   "dependencies": {
     "@tonejs/midi": "^2.0.28",
     "fast-glob": "^3.3.3",
-    "sharp": "^0.34.4"
+    "sharp": "^0.34.4",
+    "yargs": "^18.0.0"
   }
 }
