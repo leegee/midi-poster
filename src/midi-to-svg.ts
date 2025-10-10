@@ -25,6 +25,7 @@ Could run in a browser with minor I/O changes.
 */
 
 import { Midi } from '@tonejs/midi';
+import sharp from 'sharp';
 
 export type RenderOptions = {
   width?: number;
@@ -292,11 +293,22 @@ if (require.main === module) {
       process.exit(1);
     }
 
-    const [inPath, outPath] = argv as [string, string];
+    const [midiInPath, svgOutPath] = argv as [string, string];
     const pxPerSecond = argv[2] ? Number(argv[2]) : undefined;
-    const buf = fs.readFileSync(inPath);
+    const buf = fs.readFileSync(midiInPath);
+
     const svg = await renderMidiToSVG(buf.buffer, pxPerSecond ? { pxPerSecond } : undefined);
-    fs.writeFileSync(outPath, svg);
-    console.log('Wrote', outPath);
+    fs.writeFileSync(svgOutPath, svg);
+    console.log('Wrote', svgOutPath);
+
+    console.log('Reading', svgOutPath);
+    const svgRead = fs.readFileSync(svgOutPath, 'utf-8');
+    const outPathPng = svgOutPath.replace(/\.svg$/i, '.png');
+    console.log('Creating', outPathPng);
+    await sharp(Buffer.from(svgRead))
+      .png()
+      .toFile(outPathPng);
+
+    console.log('Wrote', outPathPng);
   })();
 }

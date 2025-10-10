@@ -2,6 +2,7 @@
 node_modules
 midi/
 *.svg
+*.png
 
 # output
 out
