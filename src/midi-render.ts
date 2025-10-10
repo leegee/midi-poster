@@ -86,7 +86,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
     const tracks: TrackInfo[] = [];
     const midiDuration = midi.duration || 1;
 
-    // --- Blur filters ---
+    // Blur filters
     const blurFilters = softNotes
         ? Array.from({ length: 5 }, (_, i) => {
             const v = (i + 1) / 5;
@@ -98,14 +98,15 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         : "";
     const defs = softNotes ? `<defs>\n${blurFilters}\n</defs>` : undefined;
 
-    // --- Render notes ---
+    // Render notes
     for (const track of midi.tracks) {
         const trackName = track.name || track.instrument.name || "";
         const familyKey = trackNameToFamily(trackName);
-        const colorHex = FAMILY_COLOR[familyKey] ?? FAMILY_COLOR.default ?? "#ffffff";
-        const safeHex = colorHex.replace(/^#/, "").padEnd(6, "0"); // ensure 6 digits
+        const color = FAMILY_COLOR[familyKey] ?? FAMILY_COLOR.default ?? "#ffffff";
 
-        tracks.push({ name: trackName, color: colorHex });
+        console.log(trackName, "\n\t\t", color,);
+
+        tracks.push({ name: trackName, color: color });
 
         for (const note of track.notes) {
             const x = xOffset + (note.time / midiDuration) * width;
@@ -130,7 +131,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
             const blurIndex = softNotes ? Math.max(0, 4 - Math.floor((note.velocity ?? 0) * 5)) : 0;
             const filterId = softNotes ? `url(#blur${blurIndex})` : undefined;
 
-            // --- Use FAMILY_COLOR directly ---
+            // Use FAMILY_COLOR directly
             rects.push({
                 x, y: yFinal, w: wFinal, h: hFinal,
                 color: FAMILY_COLOR[familyKey] ?? FAMILY_COLOR.default ?? "#ffffff",
@@ -143,7 +144,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
 
     }
 
-    // --- Density-based enhancement ---
+    // Density-based enhancement
     const timeStep = width / 2000;
     const pitchStep = 1;
     const densityMap = new Map<string, number>();

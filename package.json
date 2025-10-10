@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "demo:all": "bun ./src/cli.ts beethoven_symphony_5_1.svg \"midi/5/*.mid\"",
-    "demo:1": "bun ./src/cli.ts --background \"#115\" --blend-mode mask  --note-scale-factor 1 --min-note-height 1   --soft-notes true --blur 0.1 --reverb 0 --height 333 --width 1024 beethoven_symphony_9_1.svg \"midi/9/symphony_9_2_\\(c\\)cvikl.mid\""
+    "demo:1": "bun ./src/cli.ts --background \"#315\" --blend-mode blend  --note-scale-factor 1.8 --min-note-height 1   --soft-notes true --blur 0.5 --reverb 1.2 --height 333 --width 1024 beethoven_symphony_9_1.svg \"midi/9/symphony_9_2_\\(c\\)cvikl.mid\""
   },
   "devDependencies": {
     "@types/bun": "latest",
