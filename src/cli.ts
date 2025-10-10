@@ -7,6 +7,8 @@ import { renderMidi, type RenderedMidi } from "./midi-render";
 import { buildSvgRow, writeSvgAndPng } from "./midi-row";
 import { Midi } from "@tonejs/midi";
 
+const TRACK_SKIP_RE = /^(http|by |Copyright|All Rights)/;
+
 async function main() {
   const argv = yargs(hideBin(process.argv))
     .usage("Usage: $0 <out.svg> <input1.mid> [input2.mid ...] [options]")
@@ -40,6 +42,9 @@ async function main() {
     midiInstances.push(midi);
 
     for (const track of midi.tracks) {
+      if (track.name && track.name.match(TRACK_SKIP_RE)) {
+        continue;
+      }
       for (const note of track.notes) {
         globalMin = Math.min(globalMin, note.midi);
         globalMax = Math.max(globalMax, note.midi);

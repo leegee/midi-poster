@@ -7,6 +7,8 @@ export type NoteRectRendered = {
     h: number;
     color: string;
     velocity: number;
+    rx?: number;  // corner radius x
+    ry?: number;  // corner radius y
 };
 
 export type TrackInfo = {
@@ -82,12 +84,20 @@ export function renderMidi(
             const x = xOffset + (note.time / midiDuration) * width;
             const y = ((maxPitch - note.midi) / (maxPitch - minPitch)) * height;
             const w = (note.duration / midiDuration) * width;
-            const h = 2;
+            const baseH = 2; // minimal height
+            const h = baseH * (0.3 + 0.7 * note.velocity); // scale with velocity
+
+            // Store rx/ry for smoother capsule shapes
+            const rx = Math.max(1, w * 0.2);
+            const ry = Math.max(1, h / 2);
 
             rects.push({
                 x, y, w, h,
                 color: `hsl(${hue},70%,50%)`,
-                velocity: note.velocity
+                velocity: note.velocity,
+                // optional for midi-row: store corner radius
+                rx,
+                ry
             });
         }
     }

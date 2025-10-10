@@ -32,9 +32,10 @@ export function buildSvgRow(midis: RenderedMidi[], opts?: RowOptions): string {
         // Track names
         if (showTrackNames) {
             midi.tracks.forEach((t: TrackInfo) => {
-                noteElements.push(`
-          <text x="${xOffset + 5}" y="${trackNameHeight - 5}" fill="${t.color}" font-size="12" font-family="sans-serif">${t.name}</text>
-        `);
+                //         noteElements.push(`
+                //   <text x="${xOffset + 5}" y="${trackNameHeight - 5}" fill="${t.color}" font-size="12" font-family="sans-serif">${t.name}</text>
+                //         `);
+                console.log(t.color, t.name);
             });
         }
 
