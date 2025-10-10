@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "demo:all": "bun ./src/cli.ts beethoven_symphony_5_1.svg \"midi/beethoven_symphony_5*.mid\"",
-    "demo:1": "bun ./src/cli.ts --height 50 --width 800 beethoven_symphony_5_1.svg \"midi/beethoven_symphony_5_1_\\(c\\)galimberti.mid\"",
+    "demo:1": "bun ./src/cli.ts --blend-mode multiply  --noteScaleFactor 4 --softNotes true --softNoteFactor 2 --blur 1 --reverb 1 --height 200 --width 800 beethoven_symphony_5_1.svg \"midi/beethoven_symphony_5_1_\\(c\\)galimberti.mid\"",
     "demo:2": "bun ./src/cli.ts --height 150  beethoven_symphony_5_1.svg \"midi/beethoven_symphony_5_1_\\(c\\)galimberti.mid\"",
     "demo:3": "bun ./src/cli.ts --height 800  beethoven_symphony_5_1.svg \"midi/beethoven_symphony_5_1_\\(c\\)galimberti.mid\""
   },

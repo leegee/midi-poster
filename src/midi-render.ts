@@ -1,106 +1,146 @@
 import { Midi } from "@tonejs/midi";
 
-export type NoteRectRendered = {
+export interface NoteRectRendered {
     x: number;
     y: number;
     w: number;
     h: number;
     color: string;
     velocity: number;
-    rx?: number;  // corner radius x
-    ry?: number;  // corner radius y
-};
+    rx?: number;
+    ry?: number;
+}
 
-export type TrackInfo = {
+export interface TrackInfo {
     name: string;
     color: string;
-};
+}
 
-export type RenderedMidi = {
+export interface RenderedMidi {
     width: number;
     height: number;
     rects: NoteRectRendered[];
     tracks: TrackInfo[];
-};
+    defs?: string; // for blur filters
+}
 
-function programToHue(program: number | null | undefined, trackName: string = ''): number {
-    const name = trackName.toLowerCase();
+export interface RenderOptions {
+    xOffset?: number;
+    pitchRange?: [number, number];
+    width?: number;
+    height?: number;
+    reverbIntensity?: number;
+    softNotes?: boolean;
+    softNoteFactor?: number;
+    noteScaleFactor?: number;
+    minNoteHeight?: number;         // CLI override for minimum note thickness
+    velocityScaledHeight?: boolean; // scale height by velocity
+    blendMode?: string;
+}
 
-    const instrumentMap: [RegExp, number][] = [
-        [/piano|pianoforte|fortepiano/, 195],
-        [/violino|viola|violoncello|cello|contrabbasso|archi/, 38],
-        [/tromba|trombone|corno|tuba|ottoni/, 275],
-        [/flauto|oboe|clarinetto|fagotto/, 300],
-        [/tamburo|batteria|timpani|percussioni/, 210],
-        [/synth|tastiera|organo/, 50]
-    ];
-
-    for (const [regex, hue] of instrumentMap) {
-        if (regex.test(name)) return hue;
+function hashString(str: string): number {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) {
+        h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
     }
+    return h >>> 0;
+}
 
-    if (program != null) {
-        if (program >= 0 && program <= 7) return 195;
-        if (program >= 8 && program <= 15) return 210;
-        if (program >= 16 && program <= 31) return 50;
-        if (program >= 32 && program <= 39) return 40;
-        if (program >= 40 && program <= 55) return 38;
-        if (program >= 56 && program <= 63) return 10;
-        if (program >= 64 && program <= 71) return 150;
-        if (program >= 72 && program <= 79) return 275;
-        if (program >= 80 && program <= 87) return 300;
-        if (program >= 88 && program <= 95) return 340;
-        if (program >= 96 && program <= 103) return 25;
-        return 200;
-    }
-
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-        hash = (hash * 31 + name.charCodeAt(i)) % 360;
-    }
-    return 30 + (hash % 300);
+function programToHue(program: number | null, trackName: string): number {
+    const base = program !== null ? program * 17 : hashString(trackName);
+    return base % 360;
 }
 
 export function renderMidi(
     midi: Midi,
-    options: { xOffset?: number; pitchRange?: [number, number]; width?: number; height?: number; reverbIntensity?: number } = {}
+    options: RenderOptions = {}
 ): RenderedMidi {
-    const { xOffset = 0, pitchRange = [0, 127], width = 1000, height = 300 } = options;
-    const [minPitch, maxPitch] = pitchRange;
+    const {
+        xOffset = 0,
+        pitchRange = [0, 127],
+        width = 1000,
+        height = 300,
+        reverbIntensity = 1,
+        softNotes = false,
+        softNoteFactor = 3,
+        noteScaleFactor = 1,
+        minNoteHeight = 1.5,
+        velocityScaledHeight = true,
+        blendMode = "normal", // <── new default
+    } = options;
 
+    const [minPitch, maxPitch] = pitchRange;
     const rects: NoteRectRendered[] = [];
     const tracks: TrackInfo[] = [];
 
     const midiDuration = midi.duration || 1;
 
+    // Optional blur filter definition
+    const defs = softNotes
+        ? `<defs>
+           <filter id="noteBlur" x="-10%" y="-10%" width="120%" height="120%">
+             <feGaussianBlur in="SourceGraphic" stdDeviation="${reverbIntensity}" />
+           </filter>
+         </defs>`
+        : undefined;
+
     for (const track of midi.tracks) {
         const program = track.instrument.number ?? null;
-        const trackName = track.name || track.instrument.name || '';
+        const trackName = track.name || track.instrument.name || "";
         const hue = programToHue(program, trackName);
+        const color = `hsl(${hue},70%,50%)`;
 
-        tracks.push({ name: trackName, color: `hsl(${hue},70%,50%)` });
+        tracks.push({ name: trackName, color });
 
         for (const note of track.notes) {
             const x = xOffset + (note.time / midiDuration) * width;
-            const y = ((maxPitch - note.midi) / (maxPitch - minPitch)) * height;
-            const w = (note.duration / midiDuration) * width;
-            const baseH = 2; // minimal height
-            const h = baseH * (0.3 + 0.7 * note.velocity); // scale with velocity
+            const baseH = 2; // reference pixel height for one semitone row
+            const yBase = ((maxPitch - note.midi) / (maxPitch - minPitch)) * height;
 
-            // Store rx/ry for smoother capsule shapes
-            const rx = Math.max(1, w * 0.2);
-            const ry = Math.max(1, h / 2);
+            const durationW = (note.duration / midiDuration) * width;
+
+            // Velocity-responsive vertical scaling
+            const velScale =
+                velocityScaledHeight && note.velocity !== undefined
+                    ? 0.5 + note.velocity * 0.5 // range 0.5–1.0
+                    : 1;
+
+            let h =
+                baseH *
+                noteScaleFactor *
+                velScale *
+                (softNotes ? softNoteFactor : 1);
+
+            if (h < minNoteHeight) h = minNoteHeight;
+
+            const y = yBase - h / 2; // center vertically
 
             rects.push({
-                x, y, w, h,
-                color: `hsl(${hue},70%,50%)`,
-                velocity: note.velocity,
-                // optional for midi-row: store corner radius
-                rx,
-                ry
+                x,
+                y,
+                w: durationW,
+                h,
+                color,
+                velocity: note.velocity ?? 0,
+                rx: softNotes ? h / 2 : 0,
+                ry: softNotes ? h / 2 : 0,
             });
         }
     }
 
-    return { width, height, rects, tracks };
+    // Combine into SVG markup directly (optional, if CLI needs it)
+    const svg = `
+  <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+    ${defs ?? ""}
+    <g style="mix-blend-mode: ${blendMode}; ${softNotes ? "filter: url(#noteBlur);" : ""}">
+      ${rects
+            .map(
+                (r) =>
+                    `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="${r.color}" rx="${r.rx ?? 0}" ry="${r.ry ?? 0}" />`
+            )
+            .join("\n")}
+    </g>
+  </svg>`;
+
+    return { width, height, rects, tracks, defs: svg };
 }
