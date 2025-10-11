@@ -2,13 +2,6 @@ import sharp from "sharp";
 import fs from "node:fs";
 import { type RenderedMidi } from "./midi-render";
 
-/**
- * Writes SVG to file and renders PNG.
- * @param svg SVG content
- * @param svgOutPath Path to save SVG
- * @param targetWidth Optional target width for PNG. If undefined, uses intrinsic SVG width.
- * @param targetHeight Optional target height for PNG. If undefined, uses intrinsic SVG height.
- */
 export async function writeSvgAndPng(
     svg: string,
     svgOutPath: string,
@@ -20,16 +13,17 @@ export async function writeSvgAndPng(
 
     const pngOutputPath = svgOutPath.replace(/\.svg$/i, ".png");
 
-    let sharpPipeline = sharp(Buffer.from(svg)).png();
+    let pipeline = sharp(Buffer.from(svg)).png();
 
-    // Only resize if you explicitly want to scale
-    if (targetWidth && targetHeight) {
-        // sharpPipeline = sharpPipeline.resize({ width: targetWidth, height: targetHeight });
-        sharpPipeline = sharpPipeline.resize({ width: targetWidth, height: targetHeight, fit: "contain" })
-
+    if (targetWidth || targetHeight) {
+        pipeline = pipeline.resize({
+            width: targetWidth,
+            height: targetHeight,
+            fit: "contain",
+        });
     }
 
-    await sharpPipeline.toFile(pngOutputPath);
+    await pipeline.toFile(pngOutputPath);
     console.log(new Date().toLocaleTimeString(), "Wrote", pngOutputPath);
 }
 
@@ -75,8 +69,8 @@ export function buildSvgRow(
     }
 
     // Use intrinsic size unless explicit targetWidth / targetHeight given
-    const width = options.targetWidth ?? totalMidiWidth;
-    const height = options.targetHeight ?? totalHeight;
+    const width = totalMidiWidth;
+    const height = totalHeight;
 
     return {
         totalMidiWidth: totalMidiWidth,

@@ -24,7 +24,7 @@ function getGlobalPitchRange(midiInstances: Midi[]): [number, number] {
   return [globalMin - 2, globalMax + 2];
 }
 
-async function renderSingleOrDouble(midiInstances: Midi[], argv: any, svgOutputPath: string) {
+async function renderSingleOrDouble(midiInstances: Midi[], argv: any, svgOutputPath: string, midiCount: number) {
   const double = argv.double ?? false;
 
   // Single or multiple MIDIs naturally stacked
@@ -50,13 +50,21 @@ async function renderSingleOrDouble(midiInstances: Midi[], argv: any, svgOutputP
     let rendered: RenderedMidi;
 
     if (!double) {
-      rendered = renderMidi(midi, options);
-    } else {
+      rendered = renderMidi(midi, {
+        ...options,
+        width: midiCount === 1 ? argv.width : undefined,
+        height: midiCount === 1 ? argv.height : undefined,
+      });
+    }
+
+    else {
       // Double-layer: base layer
       const base = renderMidi(midi, { ...options, softNotes: true });
       // Top layer
       const top = renderMidi(midi, {
         ...options,
+        width: midiCount === 1 ? argv.width : undefined,
+        height: midiCount === 1 ? argv.height : undefined,
         softNotes: false,
         softNoteFactor: 1,
         noteScaleFactor: argv.noteScaleFactor * 0.5,
@@ -89,7 +97,7 @@ async function renderSingleOrDouble(midiInstances: Midi[], argv: any, svgOutputP
     softNotes: argv.softNotes,
   });
 
-  await writeSvgAndPng(svg, svgOutputPath, totalWidth, totalHeight);
+  await writeSvgAndPng(svg, svgOutputPath, argv.width, argv.height);
 
   console.log(`Render complete: ${svgOutputPath}`);
 }
@@ -143,7 +151,7 @@ async function main() {
     process.exit(1);
   }
 
-  await renderSingleOrDouble(midiInstances, argv, svgOutputPath || "out.svg");
+  await renderSingleOrDouble(midiInstances, argv, svgOutputPath || "out.svg", midiInstances.length);
 }
 
 main().catch(err => {
