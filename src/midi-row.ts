@@ -17,9 +17,8 @@ export async function writeSvgAndPng(
 
     if (targetWidth || targetHeight) {
         pipeline = pipeline.resize({
-            width: targetWidth,
-            height: targetHeight,
             fit: "contain",
+            ...(targetWidth ? { width: targetWidth } : { height: targetHeight }),
         });
     }
 
