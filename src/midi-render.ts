@@ -1,5 +1,6 @@
 import { Midi } from "@tonejs/midi";
-import { NAME_TO_FAMILY, FAMILY_COLOR } from "./colours";
+import { FAMILY_COLOR, trackNameToFamily } from "./colours";
+import { TRACK_SKIP_RE } from "./cli";
 
 const DENSITY_SCALE_FACTOR = 10;
 const STAR_SCALE = 1.8;
@@ -48,13 +49,6 @@ export interface RenderOptions {
     blendMode?: string;
     densityScaleFactor?: number;
     blur?: number;
-}
-
-function trackNameToFamily(name: string): string {
-    for (const [regex, family] of NAME_TO_FAMILY) {
-        if (regex.test(name)) return family;
-    }
-    return "default";
 }
 
 function makeStarPoints(cx: number, cy: number, radius: number, spikes = 12): string {
@@ -113,8 +107,11 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
 
     for (const track of midi.tracks) {
         const trackName = track.name || track.instrument.name || "";
+        if (trackName.match(TRACK_SKIP_RE)) continue;
         const familyKey = trackNameToFamily(trackName);
         const color = FAMILY_COLOR[familyKey] ?? FAMILY_COLOR.default ?? "#ffffff";
+
+        console.log(`${trackName} ... ${color}`);
 
         tracks.push({ name: trackName, color });
 

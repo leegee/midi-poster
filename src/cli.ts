@@ -7,7 +7,7 @@ import { renderMidi, type RenderedMidi } from "./midi-render";
 import { buildSvgRow, writeSvgAndPng } from "./midi-row";
 import { Midi } from "@tonejs/midi";
 
-const TRACK_SKIP_RE = /^(http|by |Copyright|All Rights)/i;
+export const TRACK_SKIP_RE = /^(http|by |Copyright|All Rights)/i;
 
 function getGlobalPitchRange(midiInstances: Midi[]): [number, number] {
   let globalMin = 127;

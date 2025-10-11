@@ -1,9 +1,10 @@
 export const NAME_TO_FAMILY: [RegExp, string][] = [
     // Woodwinds
-    [/^(flauti|flute)/i, "flute"],
+    [/^(flauti|flute|ottavino)/i, "flute"],
     [/^(oboi|oboe)/i, "oboe"],
-    [/^(clarinetti|clarinet)/i, "clarinet"],
+    [/^(clarin)/i, "clarinet"],
     [/^(fagotti|bassoon)/i, "bassoon"],
+    [/^(contro)/i, "contraBassoon"],
 
     // Brass
     [/^(corni|horn)/i, "horn"],
@@ -20,6 +21,7 @@ export const NAME_TO_FAMILY: [RegExp, string][] = [
     [/^(violoncelli|violoncello|cello|celli)/i, "cello"],
     [/^(contrabassi|double bass)/i, "bass"],
     [/^(pizzicato strings)/i, "pizzicato"],
+    [/^(tremolo strings)/i, "violin"],
 
     // Keyboard / Synth
     [/^(synthstrings 1|synth|pad)/i, "synth"],
@@ -30,13 +32,14 @@ export const FAMILY_COLOR: Record<string, string> = {
     // Woodwinds
     flute: "hsla(200,70%,70%, 0.9)",
     oboe: "hsla(210,60%,55%, 0.9)",
-    clarinet: "hsla(180,30%,65%, 0.9)",
-    bassoon: "hsla(190,50%,45%, 0.9)",
+    clarinet: "hsla(180,50%,65%, 0.9)",
+    bassoon: "hsla(190,70%,45%, 0.9)",
+    contraBassoon: "hsla(190,70%,35%, 0.9)",
 
     // Brass
-    horn: "hsl(40,70%,55%)",
-    trumpet: "hsl(50,70%,60%)",
-    trombone: "hsl(35,60%,50%)",
+    horn: "hsla(40,80%,55%, 1)",
+    trumpet: "hsla(50,80%,60%, 1)",
+    trombone: "hsla(35,70%,60%, 1)",
 
     // Strings
     violin: "hsla(120,70%,75%,.7)",
@@ -55,3 +58,12 @@ export const FAMILY_COLOR: Record<string, string> = {
 
     default: "hsl(0,0%,55%)",
 };
+
+export function trackNameToFamily(name: string) {
+    for (const [re, family] of NAME_TO_FAMILY) {
+        if (re.test(name)) return family;
+    }
+    console.warn("Unmapped track:", name);
+    return "default";
+}
+
