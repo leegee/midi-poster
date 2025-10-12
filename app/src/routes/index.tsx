@@ -1,4 +1,5 @@
 import { createSignal, Show, For, JSX } from "solid-js";
+import { arrayBufferToBase64 } from '../lib/arrayBufferToBase64';
 import './index.css';
 
 import MIDI2SVG from "~/components/MIDI2SVG";
@@ -41,7 +42,7 @@ export default function Home() {
     const urls = await Promise.all(
       files.map(async (file) => {
         const buf = await file.arrayBuffer();
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+        const base64 = arrayBufferToBase64(buf);
 
         const res = await fetch("/api/render-png", {
           method: "POST",
