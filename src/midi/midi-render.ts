@@ -1,6 +1,7 @@
 import { Midi } from "@tonejs/midi";
-import { FAMILY_COLOR, trackNameToFamily } from "./colours";
-import { TRACK_SKIP_RE } from "./cli";
+import { FAMILY_COLOR, trackNameToFamily } from "../colours";
+
+export const TRACK_SKIP_RE = /^(http|by |Copyright|All Rights)/i;
 
 const DENSITY_SCALE_FACTOR = 10;
 const STAR_SCALE = 1.8;

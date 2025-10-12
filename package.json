@@ -2,21 +2,27 @@
   "name": "midi-svg",
   "module": "src/midi-to-svg",
   "type": "module",
+  "main": "src/main.tsx",
   "private": true,
   "scripts": {
+    "dev": "vite",
     "demo:all": "bun ./src/cli.ts --double true --background \"#315\"  beethoven_symphony_5.svg \"midi/5/*.mid\"",
     "demo:1": "bun ./src/cli.ts --double true --background \"#315\" --blend-mode blend  --note-scale-factor 1.8 --min-note-height 1  --soft-notes true --blur 4 --reverb 1.2 --height 300 --width 900 beethoven_symphony_9_1.svg \"midi/9/symphony_9_1_\\(c\\)cvikl.mid\"",
     "demo:2": "bun ./src/cli.ts --double true --background \"#315\" --blend-mode blend  --note-scale-factor 1.8 --min-note-height 1  --soft-notes true --blur 4 --reverb 1.2 --height 300 --width 900 beethoven_symphony_9_2.svg \"midi/9/symphony_9_2_\\(c\\)cvikl.mid\""
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/yargs": "^17.0.33"
+    "@types/yargs": "^17.0.33",
+    "solid-js": "^1.9.9",
+    "vite": "^7.1.9",
+    "vite-plugin-solid": "^2.11.9"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
     "@tonejs/midi": "^2.0.28",
+    "beercss": "^3.12.11",
     "fast-glob": "^3.3.3",
     "sharp": "^0.34.4",
     "yargs": "^18.0.0"

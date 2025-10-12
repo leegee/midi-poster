@@ -3,8 +3,8 @@ import fs from "node:fs";
 import glob from "fast-glob";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { renderMidi, type RenderedMidi } from "./midi-render";
-import { buildSvgRow, writeSvgAndPng } from "./midi-row";
+import { renderMidi, type RenderedMidi } from "./midi/midi-render";
+import { buildSvgRow, writeSvgAndPng } from "./midi/midi-row";
 import { Midi } from "@tonejs/midi";
 
 export const TRACK_SKIP_RE = /^(http|by |Copyright|All Rights)/i;
