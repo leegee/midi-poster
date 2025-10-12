@@ -226,7 +226,7 @@ export default function Home() {
                 checked={args().double}
                 onChange={e => updateArg("double", e.currentTarget.checked)}
               />
-              <span>Double Render</span>
+              <span class="left-padding small-padding">Double Render</span>
             </label>
           </div>
         </fieldset>
