@@ -1,13 +1,5 @@
 import fs from "node:fs";
-import { type RenderedMidi } from "./midi-render";
-
-export async function writeSvgAndPng(
-    svg: string,
-    svgOutPath: string,
-) {
-    await writeSvg(svg, svgOutPath);
-    // await writePngFromSvg(svg, svgOutPath, targetWidth, targetHeight);
-}
+import { RenderOptions, type RenderedMidi } from "./midi-render";
 
 export async function writeSvg(
     svg: string,
@@ -17,18 +9,9 @@ export async function writeSvg(
     console.log(new Date().toLocaleTimeString(), "Wrote", svgOutPath);
 }
 
-export function buildSvgRow(
+export function createSvg(
     renderedMidis: RenderedMidi[],
-    options: {
-        softNotes?: boolean;
-        blur?: number;
-        noteScaleFactor?: number;
-        blendMode?: string;
-        background?: string;
-        targetWidth?: number;
-        targetHeight?: number;
-        totalWidth?: number;
-        totalHeight?: number;
+    options: RenderOptions & {
         topLayerNoBlur?: boolean;
     } = {}
 ) {

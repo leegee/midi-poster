@@ -51,6 +51,8 @@ export interface RenderOptions {
     blendMode?: string;
     densityScaleFactor?: number;
     blur?: number;
+    double?: boolean;
+    background?: string;
 }
 
 function makeStarPoints(cx: number, cy: number, radius: number, spikes = 12): string {
