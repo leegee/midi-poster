@@ -77,7 +77,7 @@ export default function Home() {
             <button class="small circle" onClick={() => args().calls ? args().calls++ : args().calls = 0}>
               <i>autorenew</i>
             </button>
-            <button class="small" onClick={renderServerPngs}>Render PNGs</button>
+            <button class="small circle" onClick={renderServerPngs}>▼</button>
           </Show>
         </fieldset>
 
@@ -212,7 +212,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div class="field border tiny-padding">
+          <div class="field border tiny-padding middle-align center-align" style={`background-color:${args().background}`}>
             <label>Background</label>
             <input type="color" class="input"
               value={args().background}
