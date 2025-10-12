@@ -79,16 +79,6 @@ export default function Home() {
             </button>
             <button class="small" onClick={renderServerPngs}>Render PNGs</button>
           </Show>
-
-          <Show when={pngUrls().length}>
-            <For each={pngUrls()}>
-              {(url, i) => (
-                <a href={url} download={`render_${i() + 1}.png`} class="button tiny outline">
-                  PNG #{i() + 1}
-                </a>
-              )}
-            </For>
-          </Show>
         </fieldset>
 
         {/* Dimensions */}
@@ -249,6 +239,19 @@ export default function Home() {
               <section class="border padding">
                 <span class="large-text"><code>{file.name}</code></span>
                 <MIDI2SVG midiFiles={[file]} args={args()} />
+
+                <Show when={pngUrls().length}>
+                  <div class="thumbnail-grid">
+                    <For each={pngUrls()}>
+                      {(url, i) => (
+                        <a href={url} download={`render_${i() + 1}.png`} class="thumbnail-link">
+                          <img src={url} alt={`Render ${i() + 1}`} class="thumbnail-img border" />
+                        </a>
+                      )}
+                    </For>
+                  </div>
+                </Show>
+
               </section>
             )}
           </For>
