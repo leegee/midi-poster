@@ -44,7 +44,7 @@ export interface RenderOptions {
     reverbIntensity?: number;
     softNotes?: boolean;
     softNoteFactor?: number;
-    noteScaleFactor?: number;
+    noteHeightScaleFactor?: number;
     minNoteHeight?: number;
     velocityScaledHeight?: boolean;
     blendMode?: string;
@@ -78,7 +78,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         reverbIntensity = 1,
         softNotes = false,
         softNoteFactor = 3,
-        noteScaleFactor = 1,
+        noteHeightScaleFactor = 1,
         minNoteHeight = 1.5,
         velocityScaledHeight = true,
         densityScaleFactor = DENSITY_SCALE_FACTOR,
@@ -123,7 +123,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
             const yBase = ((maxPitch - note.midi) / (maxPitch - minPitch)) * height;
             const durationW = (note.duration / midiDuration) * width;
             const velScale = velocityScaledHeight ? 0.5 + (note.velocity ?? 0) * 0.5 : 1;
-            let h = 2 * noteScaleFactor * velScale * (softNotes ? softNoteFactor : 1);
+            let h = 2 * noteHeightScaleFactor * velScale * (softNotes ? softNoteFactor : 1);
             if (h < minNoteHeight) h = minNoteHeight;
 
             tempRects.push({ note, trackFamily: familyKey, x, yBase, velScale, hBase: h, wBase: durationW });

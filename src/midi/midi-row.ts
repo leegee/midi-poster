@@ -31,7 +31,7 @@ export function buildSvgRow(
     options: {
         softNotes?: boolean;
         blur?: number;
-        noteScaleFactor?: number;
+        noteHeightScaleFactor?: number;
         blendMode?: string;
         background?: string;
         targetWidth?: number;

@@ -5,6 +5,33 @@ import './index.css';
 import MIDI2SVG from "~/components/MIDI2SVG";
 import { RenderOptions } from "~/midi/midi-render";
 
+const TIME_DIVISIONS = [
+  { label: "1/16", value: 1 / 16 },
+  { label: "1/8", value: 1 / 8 },
+  { label: "1/4", value: 1 / 4 },
+  { label: "1/2", value: 1 / 2 },
+  { label: "1", value: 1 },
+  { label: "2/1", value: 2 },
+  { label: "4/1", value: 4 },
+  { label: "8/1", value: 8 },
+  { label: "16/1", value: 16 },
+];
+
+const BLEND_MODES = [
+  "normal",
+  "multiply",
+  "screen",
+  "overlay",
+  "soft-light",
+  "hard-light",
+  "color-burn",
+  "color-dodge",
+  "difference",
+  "exclusion",
+  "lighten",
+  "darken",
+];
+
 export default function Home() {
   const [midiFiles, setMidiFiles] = createSignal<File[]>([]);
   const [pngUrls, setPngUrls] = createSignal<string[]>([]);
@@ -19,11 +46,12 @@ export default function Home() {
     reverbIntensity: 1,
     softNotes: false,
     softNoteFactor: 3,
-    noteScaleFactor: 1,
+    noteHeightScaleFactor: 1,
     minNoteHeight: 1.5,
     velocityScaledHeight: true,
     blendMode: "normal",
     densityScaleFactor: 10,
+    densityTimeDivision: 4,
     blur: 2,
     double: false,
     background: "#222255",
@@ -149,8 +177,8 @@ export default function Home() {
               <label>Scale Factor</label>
               <div class="tooltip">Note scale factor</div>
               <input type="number" class="input border no-padding"
-                value={args().noteScaleFactor}
-                onBlur={e => updateArg("noteScaleFactor", +e.currentTarget.value)}
+                value={args().noteHeightScaleFactor}
+                onBlur={e => updateArg("noteHeightScaleFactor", +e.currentTarget.value)}
               />
             </div>
           </div>
@@ -158,6 +186,8 @@ export default function Home() {
           <div class="paired-row">
             <div class="field">
               <label>Min Note Height</label>
+              <div class="tooltip">Minimum note height</div>
+
               <input type="number" class="input border no-padding" min={0} max={1000}
                 value={args().minNoteHeight}
                 onBlur={e => updateArg("minNoteHeight", +e.currentTarget.value)}
@@ -167,8 +197,9 @@ export default function Home() {
             <div class="field">
               <nav>
                 <label class="max">
-                  <p>Velocity Scaled Height</p>
+                  <p>Velocity Scales Height</p>
                 </label>
+                <div class="tooltip right">Normalised across what I don't recall</div>
                 <label class="switch">
                   <input type="checkbox"
                     checked={args().velocityScaledHeight}
@@ -188,17 +219,31 @@ export default function Home() {
           <div class="paired-row">
             <div class="field">
               <label>Density Scale</label>
+              <div class="tooltip">Scale up the size of notes by their cluster density</div>
               <input type="number" class="input border no-padding"
                 value={args().densityScaleFactor}
                 onBlur={e => updateArg("densityScaleFactor", +e.currentTarget.value)}
               />
             </div>
             <div class="field border">
-              <label>Reverb Intensity</label>
+              {/* <label>Reverb Intensity</label>
+              <div class="tooltip right">A blur to the right of notes reflecting reverb</div>
               <input type="range" class="range" min="0" max="5" step="0.1"
                 value={args().reverbIntensity}
                 onBlur={e => updateArg("reverbIntensity", +e.currentTarget.value)}
-              />
+              /> */}
+
+              <div class="field middle-align">
+                <label class="slider">
+                  <input type="range" min="0" max="5" step="0.1"
+                    value={args().reverbIntensity}
+                    onBlur={e => updateArg("reverbIntensity", +e.currentTarget.value)}
+                  />
+                  <span></span>
+                </label>
+                <span class="helper">Reverb Intensity</span>
+              </div>
+
             </div>
           </div>
 
@@ -210,34 +255,68 @@ export default function Home() {
                 onBlur={e => updateArg("blur", +e.currentTarget.value)}
               />
             </div>
+
             <div class="field">
-              <label>Blend Mode</label>
-              <input type="text" class="input"
-                value={args().blendMode}
-                onBlur={e => updateArg("blendMode", e.currentTarget.value)}
-              />
+              <label>Time Division</label>
+              <div class="tooltip">Fraction of a beat per density cell (eg 0.25 = 16th note)</div>
+              <select
+                value={args().densityTimeDivision}
+                onChange={(e) => setArgs({ ...args(), densityTimeDivision: parseFloat(e.currentTarget.value) })}
+              >
+                {TIME_DIVISIONS.map((d) => (
+                  <option value={d.value}>{d.label}</option>
+                ))}
+              </select>
             </div>
           </div>
 
-          <div class="field tiny-padding middle-align center-align" style={`background-color:${args().background}`}>
-            <h6 class="small">Background</h6>
-            <input type="color" class="input"
-              value={args().background}
-              onBlur={e => updateArg("background", e.currentTarget.value)}
-            />
+          <div class="paired-row">
+            <div class="field tiny-margin border label">
+              <div class="tooltip right">Such as "normal," "multiply," or "screen." </div>
+              <select
+                value={args().blendMode}
+                onChange={(e) => setArgs({ ...args(), blendMode: e.currentTarget.value })}
+              >
+                {BLEND_MODES.map((mode) => (
+                  <option value={mode}>{mode}</option>
+                ))}
+              </select>
+              <label>Blend Mode</label>
+            </div>
+
+            <div class="field">
+              <nav>
+                <label class="max">
+                  <p>Double Render</p>
+                </label>
+                <div class="tooltip right">Render two versions at once...mysterious</div>
+                <label class="switch">
+                  <input type="checkbox"
+                    checked={args().double}
+                    onChange={e => updateArg("double", e.currentTarget.checked)}
+                  />
+                  <span></span>
+                </label>
+              </nav>
+            </div>
+
           </div>
 
-          <div class="switch-field">
-            <label class="switch">
-              <input type="checkbox"
-                checked={args().double}
-                onChange={e => updateArg("double", e.currentTarget.checked)}
+          <div class="elevate field border no-padding middle-align center-align no-bottom-margin no-top-margin" style={`background-color:${args().background}`}>
+            <nav>
+              <input type="color" class="input"
+                value={args().background}
+                onBlur={e => updateArg("background", e.currentTarget.value)}
               />
-              <span class="left-padding small-padding">Double Render</span>
-            </label>
+              <button class="circle transparent">
+                <i>palette</i>
+              </button>
+              <h5 class="max">Background</h5>
+            </nav>
           </div>
+
         </fieldset>
-      </nav>
+      </nav >
 
       <main class="responsive">
         <Show when={midiFiles().length > 0}>

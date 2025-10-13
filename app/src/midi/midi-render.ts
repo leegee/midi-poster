@@ -45,11 +45,12 @@ export interface RenderOptions {
     reverbIntensity?: number;
     softNotes?: boolean;
     softNoteFactor?: number;
-    noteScaleFactor?: number;
+    noteHeightScaleFactor?: number;
     minNoteHeight?: number;
     velocityScaledHeight?: boolean;
     blendMode?: string;
     densityScaleFactor?: number;
+    densityTimeDivision?: number;
     blur?: number;
     double?: boolean;
     background?: string;
@@ -79,7 +80,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         reverbIntensity = 1,
         softNotes = false,
         softNoteFactor = 3,
-        noteScaleFactor = 1,
+        noteHeightScaleFactor = 1,
         minNoteHeight = 1.5,
         velocityScaledHeight = true,
         densityScaleFactor = DENSITY_SCALE_FACTOR,
@@ -124,7 +125,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
             const yBase = ((maxPitch - note.midi) / (maxPitch - minPitch)) * height;
             const durationW = (note.duration / midiDuration) * width;
             const velScale = velocityScaledHeight ? 0.5 + (note.velocity ?? 0) * 0.5 : 1;
-            let h = 2 * noteScaleFactor * velScale * (softNotes ? softNoteFactor : 1);
+            let h = 2 * noteHeightScaleFactor * velScale * (softNotes ? softNoteFactor : 1);
             if (h < minNoteHeight) h = minNoteHeight;
 
             tempRects.push({ note, trackFamily: familyKey, x, yBase, velScale, hBase: h, wBase: durationW });
@@ -132,8 +133,19 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
     }
 
     // Build density map
-    const timeStep = width / 2000;
+    // derive musical step duration
+    // use tempo if available, otherwise approximate using total duration
+    const tempo = midi.header.tempos?.[0]?.bpm ?? 120;
+    const secondsPerBeat = 60 / tempo;
     const pitchStep = 1;
+
+    // e.g. densityTimeDivision = 0.25 means one cell per 16th note
+    const timeDivisionBeats = options.densityTimeDivision ?? 0.25;
+    const timeStepDuration = secondsPerBeat * timeDivisionBeats;
+
+    // convert that musical duration into pixels
+    const timeStep = (timeStepDuration / midi.duration) * width;
+
     const densityMap = new Map<string, number>();
 
     for (const r of tempRects) {

@@ -52,6 +52,7 @@ p {
     background-color: var(--surface-container-high) !important;
   }
 
+  .whole-row,
   .paired-row {
     display: flex !important;
     flex-wrap: wrap;
@@ -60,6 +61,18 @@ p {
     padding: 1em;
     gap: 0.5rem;
     width: 100%;
+  }
+
+  .whole-row>.field {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100%;
+  }
+
+  .whole-row>.field>input,
+  .whole-row>.field>select {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   .paired-row>.field {
@@ -91,20 +104,29 @@ p {
     min-width: 50%;
   }
 
+  input,
+  select,
   input.input,
   input.range,
   input[type="number"],
   input[type="text"],
   input[type="color"] {
-    width: calc(100% - 0.8em);
-    max-width: 50%;
+    display: block;
     padding: 0.3em 0.6em !important;
     border-radius: 4pt;
     height: 100%;
-    display: block;
+  }
+
+  input[type="color"] {
+    width: 100%;
+    cursor: "pointer";
+  }
+
+  input {
     text-align: center;
     background-color: var(--surface-container-high);
   }
+
 }
 
 

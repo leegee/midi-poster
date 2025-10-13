@@ -41,7 +41,7 @@ async function renderSingleOrDouble(midiInstances: Midi[], argv: any, svgOutputP
       reverbIntensity: argv.reverb,
       softNotes: argv.softNotes,
       softNoteFactor: argv.softNoteFactor,
-      noteScaleFactor: argv.noteScaleFactor,
+      noteHeightScaleFactor: argv.noteHeightScaleFactor,
       velocityScaledHeight: argv.velocityScaledHeight,
       minNoteHeight: argv.minNoteHeight,
       densityScaleFactor: argv.densityScaleFactor,
@@ -68,7 +68,7 @@ async function renderSingleOrDouble(midiInstances: Midi[], argv: any, svgOutputP
         height: midiCount === 1 ? argv.height : undefined,
         softNotes: false,
         softNoteFactor: 1,
-        noteScaleFactor: argv.noteScaleFactor * 0.5,
+        noteHeightScaleFactor: argv.noteHeightScaleFactor * 0.5,
       });
 
       // Merge layers
