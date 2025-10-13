@@ -1,9 +1,10 @@
-import { createSignal, Show, For, JSX } from "solid-js";
+import { createSignal, Show, For, JSX, createEffect } from "solid-js";
 import { arrayBufferToBase64 } from '../lib/arrayBufferToBase64';
 import './index.css';
 
 import MIDI2SVG from "~/components/MIDI2SVG";
 import { RenderOptions } from "~/midi/midi-render";
+import { busyStore } from "~/stores/busy-store";
 
 const TIME_DIVISIONS = [
   { label: "1/16", value: 1 / 16 },
@@ -94,22 +95,27 @@ export default function Home() {
 
   return (
     <>
-      <nav class="left controls" style={{ width: 'clamp(240pt,20vw,420px)', padding: '0.5rem' }}>
-        <fieldset class="tiny-padding">
-          <button class="small">
-            <i>attach_file</i>
-            <span>MIDI File(s)</span>
-            <input type="file" multiple accept=".mid" onChange={handleFiles} />
-          </button>
-
-          <Show when={midiFiles().length > 0}>
-            <button class="small circle" onClick={() => args().calls ? args().calls++ : args().calls = 0}>
-              <i>autorenew</i>
+      <nav class={"left controls " + (busyStore.busy ? " busy " : "")}>
+        <header class="tiny-padding">
+          <nav>
+            <button class="small">
+              <i>attach_file</i>
+              <span>MIDI File(s)</span>
+              <input type="file" multiple accept=".mid" onChange={handleFiles} />
             </button>
-            <button class="small circle" onClick={renderServerPngs}>▼</button>
-          </Show>
-        </fieldset>
 
+            <Show when={midiFiles().length > 0}>
+              <button class="small circle" onClick={() => args().calls ? args().calls++ : args().calls = 0}>
+                <i>autorenew</i>
+                <div class="tooltip bottom">Force a re-render</div>
+              </button>
+              <button class="small circle" onClick={renderServerPngs}>
+                <i>download</i>
+                <div class="tooltip bottom">Download PNGs</div>
+              </button>
+            </Show>
+          </nav>
+        </header>
 
         <section>
           <Show when={pngUrls().length}>
@@ -168,19 +174,11 @@ export default function Home() {
         </fieldset>
 
         {/* Notes */}
+
         <fieldset class="tiny-padding border">
           <legend>Notes</legend>
+
           <div class="paired-row">
-            <div class="field">
-              <label>Soft Factor</label>
-              <div class="tooltip">Soft note factor</div>
-
-              <input type="number" class="input border no-padding"
-                value={args().softNoteFactor}
-                onBlur={e => updateArg("softNoteFactor", +e.currentTarget.value)}
-              />
-            </div>
-
             <div class="field">
               <nav>
                 <label class="max">
@@ -196,7 +194,26 @@ export default function Home() {
                 </label>
               </nav>
             </div>
+          </div>
 
+          <div class="paired-row">
+            <div class="field">
+              <label>Blur</label>
+              <div class="tooltip">Gaussian blur standard diviation</div>
+              <input type="number" class="input border no-padding"
+                value={args().blur} disabled={!args().softNotes}
+                onBlur={e => updateArg("blur", +e.currentTarget.value)}
+              />
+            </div>
+
+            <div class="field">
+              <label>Soft Factor</label>
+              <div class="tooltip">Soft note factor</div>
+              <input type="number" class="input border no-padding"
+                value={args().softNoteFactor} disabled={!args().softNotes}
+                onBlur={e => updateArg("softNoteFactor", +e.currentTarget.value)}
+              />
+            </div>
           </div>
 
           <div class="paired-row">
@@ -277,14 +294,6 @@ export default function Home() {
           </div>
 
           <div class="paired-row">
-            <div class="field">
-              <label>Blur</label>
-              <input type="number" class="input border no-padding"
-                value={args().blur}
-                onBlur={e => updateArg("blur", +e.currentTarget.value)}
-              />
-            </div>
-
             <div class="field">
               <label>Time Division</label>
               <div class="tooltip">Fraction of a beat per density cell (eg 0.25 = 16th note)</div>

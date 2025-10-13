@@ -34,6 +34,7 @@
     "@tonejs/midi": "^2.0.28",
     "beercss": "^3.12.11",
     "fast-glob": "^3.3.3",
+    "just-debounce": "^1.1.0",
     "sharp": "^0.34.4",
     "yargs": "^18.0.0"
   }

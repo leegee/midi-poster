@@ -38,6 +38,8 @@ p {
 
 
 .controls {
+  width: clamp(240pt, 20vw, 420px);
+  padding: 0.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -129,6 +131,14 @@ p {
 
 }
 
+.busy *,
+.busy input,
+.busy select {
+  color: grey !important;
+  background-color: disabled !important;
+  pointer-events: none !important;
+  cursor: wait !important;
+}
 
 .thumbnail-grid {
   display: flex;
