@@ -47,6 +47,7 @@ export default function Home() {
     softNotes: false,
     softNoteFactor: 3,
     noteHeightScaleFactor: 1,
+    noteWidthScaleFactor: 1,
     minNoteHeight: 1.5,
     velocityScaledHeight: true,
     blendMode: "normal",
@@ -109,6 +110,22 @@ export default function Home() {
           </Show>
         </fieldset>
 
+
+        <section>
+          <Show when={pngUrls().length}>
+            <div class="border padding thumbnail-grid">
+              <For each={pngUrls()}>
+                {(url, i) => (
+                  <a href={url} download={`render_${i() + 1}.png`} class="thumbnail-link">
+                    <img src={url} alt={`Render ${i() + 1}`} class="thumbnail-img border" />
+                  </a>
+                )}
+              </For>
+            </div>
+          </Show>
+        </section>
+
+
         {/* Dimensions */}
         <fieldset class="tiny-padding border">
           <legend>Processing Dimensions</legend>
@@ -153,16 +170,6 @@ export default function Home() {
         {/* Notes */}
         <fieldset class="tiny-padding border">
           <legend>Notes</legend>
-          <div class="switch-field">
-            <label class="switch">
-              <input type="checkbox"
-                checked={args().softNotes}
-                onChange={e => updateArg("softNotes", e.currentTarget.checked)}
-              />
-              <span>Soft Notes</span>
-            </label>
-          </div>
-
           <div class="paired-row">
             <div class="field">
               <label>Soft Factor</label>
@@ -173,8 +180,36 @@ export default function Home() {
                 onBlur={e => updateArg("softNoteFactor", +e.currentTarget.value)}
               />
             </div>
+
             <div class="field">
-              <label>Scale Factor</label>
+              <nav>
+                <label class="max">
+                  <p>Soft notes</p>
+                </label>
+                <div class="tooltip right">Softens blocks with fuzzy edges</div>
+                <label class="switch">
+                  <input type="checkbox"
+                    checked={args().softNotes}
+                    onChange={e => updateArg("softNotes", e.currentTarget.checked)}
+                  />
+                  <span></span>
+                </label>
+              </nav>
+            </div>
+
+          </div>
+
+          <div class="paired-row">
+            <div class="field">
+              <label>Width</label>
+              <div class="tooltip">Note scale factor</div>
+              <input type="number" class="input border no-padding"
+                value={args().noteWidthScaleFactor}
+                onBlur={e => updateArg("noteWidthScaleFactor", +e.currentTarget.value)}
+              />
+            </div>
+            <div class="field">
+              <label>Height</label>
               <div class="tooltip">Note scale factor</div>
               <input type="number" class="input border no-padding"
                 value={args().noteHeightScaleFactor}
@@ -225,16 +260,10 @@ export default function Home() {
                 onBlur={e => updateArg("densityScaleFactor", +e.currentTarget.value)}
               />
             </div>
-            <div class="field border">
-              {/* <label>Reverb Intensity</label>
-              <div class="tooltip right">A blur to the right of notes reflecting reverb</div>
-              <input type="range" class="range" min="0" max="5" step="0.1"
-                value={args().reverbIntensity}
-                onBlur={e => updateArg("reverbIntensity", +e.currentTarget.value)}
-              /> */}
 
+            <div class="field border">
               <div class="field middle-align">
-                <label class="slider">
+                <label class="slider border">
                   <input type="range" min="0" max="5" step="0.1"
                     value={args().reverbIntensity}
                     onBlur={e => updateArg("reverbIntensity", +e.currentTarget.value)}
@@ -322,25 +351,12 @@ export default function Home() {
         <Show when={midiFiles().length > 0}>
           <For each={midiFiles()}>
             {(file) => (
-              <section class="border padding">
-                <span class="large-text"><code>{file.name}</code></span>
-                <MIDI2SVG midiFiles={[file]} args={args()} />
-
-                <Show when={pngUrls().length}>
-                  <div class="thumbnail-grid">
-                    <For each={pngUrls()}>
-                      {(url, i) => (
-                        <a href={url} download={`render_${i() + 1}.png`} class="thumbnail-link">
-                          <img src={url} alt={`Render ${i() + 1}`} class="thumbnail-img border" />
-                        </a>
-                      )}
-                    </For>
-                  </div>
-                </Show>
-
+              <section class="padding">
+                <MIDI2SVG midiFiles={[file]} title={file.name} args={args()} />
               </section>
             )}
           </For>
+
         </Show>
       </main>
     </>

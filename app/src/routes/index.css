@@ -145,16 +145,23 @@ p {
 
   .thumbnail-img {
     position: relative;
-    width: 120pt;
-    height: auto;
+    /* width: 3em; */
+    /* height: auto; */
+    height: 2em;
     border-radius: 4pt;
     object-fit: contain;
+    opacity: 0.8;
+  }
+
+  .thumbnail-img:hover {
+    opacity: 1;
   }
 
   .thumbnail-link::after {
-    content: "▼Download";
+    content: "💾";
     position: absolute;
     top: 50%;
+    top: -100%;
     left: 50%;
     transform: translate(-50%, -50%);
     color: rgba(255, 255, 255, 0.8);

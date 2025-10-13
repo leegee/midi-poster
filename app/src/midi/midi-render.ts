@@ -40,12 +40,15 @@ export interface RenderOptions {
     pitchRange?: [number, number];
     width?: number;
     height?: number;
+    totalWidth?: number;
+    totalHeight?: number;
     targetWidth?: number;
     targetHeight?: number;
     reverbIntensity?: number;
     softNotes?: boolean;
     softNoteFactor?: number;
     noteHeightScaleFactor?: number;
+    noteWidthScaleFactor?: number;
     minNoteHeight?: number;
     velocityScaledHeight?: boolean;
     blendMode?: string;
@@ -54,6 +57,7 @@ export interface RenderOptions {
     blur?: number;
     double?: boolean;
     background?: string;
+    topLayerNoBlur?: boolean;
 }
 
 function makeStarPoints(cx: number, cy: number, radius: number, spikes = 12): string {
@@ -81,6 +85,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         softNotes = false,
         softNoteFactor = 3,
         noteHeightScaleFactor = 1,
+        noteWidthScaleFactor = 1,
         minNoteHeight = 1.5,
         velocityScaledHeight = true,
         densityScaleFactor = DENSITY_SCALE_FACTOR,
@@ -121,14 +126,28 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         tracks.push({ name: trackName, color });
 
         for (const note of track.notes) {
-            const x = xOffset + (note.time / midiDuration) * width;
+            const xBase = xOffset + (note.time / midiDuration) * width;
             const yBase = ((maxPitch - note.midi) / (maxPitch - minPitch)) * height;
+
             const durationW = (note.duration / midiDuration) * width;
+            const scaledW = durationW * noteWidthScaleFactor;
+
             const velScale = velocityScaledHeight ? 0.5 + (note.velocity ?? 0) * 0.5 : 1;
             let h = 2 * noteHeightScaleFactor * velScale * (softNotes ? softNoteFactor : 1);
             if (h < minNoteHeight) h = minNoteHeight;
 
-            tempRects.push({ note, trackFamily: familyKey, x, yBase, velScale, hBase: h, wBase: durationW });
+            // Centre around original x position
+            const x = xBase - (scaledW - durationW) / 2;
+
+            tempRects.push({
+                note,
+                trackFamily: familyKey,
+                x,
+                yBase,
+                velScale,
+                hBase: h,
+                wBase: scaledW,
+            });
         }
     }
 

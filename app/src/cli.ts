@@ -42,6 +42,7 @@ async function renderSingleOrDouble(midiInstances: Midi[], argv: any, svgOutputP
       softNotes: argv.softNotes,
       softNoteFactor: argv.softNoteFactor,
       noteHeightScaleFactor: argv.noteHeightScaleFactor,
+      noteWidthScaleFactor: argv.noteWidthScaleFactor,
       velocityScaledHeight: argv.velocityScaledHeight,
       minNoteHeight: argv.minNoteHeight,
       densityScaleFactor: argv.densityScaleFactor,
@@ -69,6 +70,7 @@ async function renderSingleOrDouble(midiInstances: Midi[], argv: any, svgOutputP
         softNotes: false,
         softNoteFactor: 1,
         noteHeightScaleFactor: argv.noteHeightScaleFactor * 0.5,
+        noteWidthScaleFactor: argv.noteWidthScaleFactor * 0.5,
       });
 
       // Merge layers
@@ -91,11 +93,11 @@ async function renderSingleOrDouble(midiInstances: Midi[], argv: any, svgOutputP
 
   // Build final SVG row
   const { svg } = createSvg(renderedMidis, {
-    totalWidth,
-    totalHeight,
     background: argv.background,
     blur: argv.blur,
     softNotes: argv.softNotes,
+    totalHeight,
+    totalWidth,
   });
 
   await writeSvg(svg, svgOutputPath);

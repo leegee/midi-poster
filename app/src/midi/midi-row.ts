@@ -11,9 +11,7 @@ export async function writeSvg(
 
 export function createSvg(
     renderedMidis: RenderedMidi[],
-    options: RenderOptions & {
-        topLayerNoBlur?: boolean;
-    } = {}
+    options: RenderOptions = {}
 ) {
     const { blendMode, background = "#FFF", topLayerNoBlur = false } = options;
     const fgBlend = blendMode ? `mix-blend-mode:${blendMode};` : "";

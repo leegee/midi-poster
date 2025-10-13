@@ -3,6 +3,7 @@ import { renderMidi, type RenderOptions } from "~/midi/midi-render";
 import { createSvg } from "~/midi/midi-row";
 
 type Props = {
+    title: string;
     midiFiles: File[];
     args: RenderOptions & { calls: number };
 };
@@ -26,14 +27,16 @@ export default function MIDI2SVG(props: Props) {
 
     return (
         <Show when={svg()} fallback={<p>Upload MIDI files to preview</p>}>
-            <div style="display:flex; padding: 2rem; justify-content:center;">
+            <fieldset style="display:flex; padding: 2rem; justify-content:center;">
+                <legend class="large-text code border"><code>{props.title}</code></legend>
+
                 <div innerHTML={svg()!}
                     style={{
                         width: props.args.targetWidth ? `${props.args.targetWidth}px` : "auto",
                         height: props.args.targetHeight ? `${props.args.targetHeight}px` : "auto"
                     }}
                 />
-            </div>
+            </fieldset>
         </Show>
     );
 }
