@@ -1,5 +1,5 @@
-midi/*.midi
 .svg
+midi/**/*.mid
 
 dist
 .wrangler
