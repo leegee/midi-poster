@@ -39,6 +39,7 @@ export function createSvg(
             }
         }
 
+        console.log('xxx', midi, midi.features?.length, options.renderFeatures)
         if (midi.features?.length && options.renderFeatures) {
             featureOverlay += renderDensityFeatures(midi.features, midi.width, midi.height);
         }

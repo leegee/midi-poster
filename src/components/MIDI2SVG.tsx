@@ -3,6 +3,7 @@ import { renderMidi, type RenderOptions } from "~/midi/midi-render";
 import { createSvg } from "~/midi/midi-row";
 import debounce from "just-debounce";
 import { busyStore } from "~/stores/busy-store";
+import { extractDensityFeatures } from "~/lib/density-feature";
 
 type Props = {
     title: string;
@@ -41,6 +42,17 @@ export default function MIDI2SVG(props: Props) {
             const buffers = await Promise.all(files.map(f => f.arrayBuffer()));
             const midis = buffers.map(buf => new Midi(buf));
             const rendered = renderMidi(midis[0], args);
+
+            if (rendered.density && rendered.densityMeta) {
+                rendered.features = extractDensityFeatures(
+                    rendered.density,
+                    rendered.densityMeta,
+                    rendered.width,
+                    rendered.height,
+                    5 // top N features
+                );
+            }
+
             const svgStr = createSvg([rendered], args).svg;
             setSvg(svgStr);
         } finally {

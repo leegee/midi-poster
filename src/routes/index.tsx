@@ -57,6 +57,7 @@ export default function Home() {
     blur: 2,
     double: false,
     background: "#222255",
+    renderFeatures: false,
   });
 
   const handleFiles: JSX.ChangeEventHandler<HTMLInputElement, Event> = (e) => {
@@ -305,6 +306,22 @@ export default function Home() {
                   <option value={d.value}>{d.label}</option>
                 ))}
               </select>
+            </div>
+
+            <div class="field">
+              <nav>
+                <label class="max">
+                  <p>Render features</p>
+                </label>
+                <div class="tooltip right">Render mystery features</div>
+                <label class="switch">
+                  <input type="checkbox"
+                    checked={args().renderFeatures}
+                    onChange={e => updateArg("renderFeatures", e.currentTarget.checked)}
+                  />
+                  <span></span>
+                </label>
+              </nav>
             </div>
           </div>
 

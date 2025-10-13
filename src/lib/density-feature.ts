@@ -102,21 +102,29 @@ export function renderDensityFeatures(
     width: number,
     height: number
 ): string {
+    console.log('renderDensityFeatures', features?.length)
     if (!features?.length) return "";
 
     return features
         .map(f => {
-            const hue = Math.round(200 + 80 * f.maxDensity); // blue–green hues for intensity
+            const hue = Math.round(200 + 80 * f.maxDensity);
             const opacity = 0.25 + 0.5 * f.avgDensity; // scale alpha by density
+
+            //   fill="hsla(${hue},70%,70%,${opacity.toFixed(2)})" 
+            //   fill="hsla(${hue},70%,70%,${opacity})"
+            //   stroke="hsla(${hue},50%,90%,${opacity.toFixed(2)})" 
+            //   stroke-width="1.5" 
+
             return `<rect 
-          x="${f.x.toFixed(2)}" 
-          y="${height - f.y - f.height}" 
-          width="${f.width.toFixed(2)}" 
-          height="${f.height.toFixed(2)}" 
-          fill="hsla(${hue},70%,60%,${opacity.toFixed(2)})" 
-          stroke="hsla(${hue},70%,40%,0.8)" 
-          stroke-width="1.5" 
-          rx="6" ry="6"/>`;
+                x="${f.x.toFixed(2)}" 
+                y="${height - f.y - f.height}" 
+                width="${f.width.toFixed(2)}" 
+                height="${f.height.toFixed(2)}" 
+                rx="${Math.min(f.width, f.height) * 0.5}"
+                ry="${Math.min(f.width, f.height) * 0.5}"
+                fill="#fff2"
+                filter="url(#feature-glow)" 
+            />`;
         })
         .join("\n");
 }

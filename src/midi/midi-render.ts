@@ -99,6 +99,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         velocityScaledHeight = true,
         densityScaleFactor = DENSITY_SCALE_FACTOR,
         blur = 4,
+        renderFeatures = true,
     } = options;
 
     const scaleX = targetWidth / width;
@@ -110,15 +111,32 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
     const midiDuration = midi.duration || 1;
 
     // Blur defs
-    const blurFilters = softNotes
-        ? Array.from({ length: 5 }, (_, i) => {
-            const v = (i + 1) / 5;
-            const useBlur = (1 - v) * reverbIntensity * blur;
-            return `<filter id="blur${i}" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur in="SourceGraphic" stdDeviation="${useBlur}" />
-                </filter>`;
-        }).join("\n")
-        : "";
+    const blurFilters = (
+        softNotes
+            ? Array.from({ length: 5 }, (_, i) => {
+                const v = (i + 1) / 5;
+                const useBlur = (1 - v) * reverbIntensity * blur;
+                return `<filter id="blur${i}" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur in="SourceGraphic" stdDeviation="${useBlur}" />
+                    </filter>`;
+            }).join("\n")
+            : ""
+    )
+        + `    <filter id="cloud-glow" x="-200%" y="-200%" width="500%" height="500%">
+      <!-- base blur for glow -->
+      <feGaussianBlur in="SourceGraphic" stdDeviation="20" result="blur"/>
+      <!-- optional color tint for the glow -->
+      <feFlood flood-color="white" flood-opacity="0.6" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="coloredBlur"/>
+      <!-- merge with original fill -->
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+`
+        ;
+
     const defs = softNotes ? `<defs>\n${blurFilters}\n</defs>` : undefined;
 
     // Collect temporary rects for density
@@ -185,6 +203,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
             densityMap.set(key, (densityMap.get(key) ?? 0) + 1);
         }
     }
+
     const maxDensity = Math.max(...densityMap.values(), 1);
 
     // Finalize rects with scaling applied
@@ -223,6 +242,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         const wScaled = wFinal * scaleX;
         const hScaled = hFinal * scaleY;
 
+        // Colouring
         const starPoints = shape === "star"
             ? makeStarPoints(xScaled + wScaled / 2, yScaled + hScaled / 2, hScaled / 2)
             : undefined;
@@ -255,7 +275,10 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         });
     }
 
+    // Density map
+
     const density: DensityCell[] = [];
+
     for (const [key, value] of densityMap.entries()) {
         const [t, pitch] = key.split(":").map(Number);
         density.push({
