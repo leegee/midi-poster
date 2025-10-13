@@ -201,7 +201,7 @@ export default function Home() {
 
           <div class="paired-row">
             <div class="field">
-              <label>Width</label>
+              <label>Scale Width</label>
               <div class="tooltip">Note scale factor</div>
               <input type="number" class="input border no-padding"
                 value={args().noteWidthScaleFactor}
@@ -209,7 +209,7 @@ export default function Home() {
               />
             </div>
             <div class="field">
-              <label>Height</label>
+              <label>Scale Height</label>
               <div class="tooltip">Note scale factor</div>
               <input type="number" class="input border no-padding"
                 value={args().noteHeightScaleFactor}
