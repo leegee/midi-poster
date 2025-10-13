@@ -120,10 +120,15 @@ export function renderDensityFeatures(
                 y="${height - f.y - f.height}" 
                 width="${f.width.toFixed(2)}" 
                 height="${f.height.toFixed(2)}" 
-                rx="${Math.min(f.width, f.height) * 0.5}"
-                ry="${Math.min(f.width, f.height) * 0.5}"
-                fill="#fff2"
-                filter="url(#feature-glow)" 
+                rx="${Math.min(f.width, f.height)}"
+                ry="${Math.min(f.width, f.height)}"
+                fill="white"
+                fill-opacity="0.15"
+                filter="url(#feature-glow)"
+                stroke="white"
+                stroke-opacity="0.8"
+                stroke-width="2"
+                style="mix-blend-mode: soft-light;"
             />`;
         })
         .join("\n");

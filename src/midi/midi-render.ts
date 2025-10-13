@@ -122,19 +122,18 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
             }).join("\n")
             : ""
     )
-        + `    <filter id="cloud-glow" x="-200%" y="-200%" width="500%" height="500%">
-      <!-- base blur for glow -->
-      <feGaussianBlur in="SourceGraphic" stdDeviation="20" result="blur"/>
-      <!-- optional color tint for the glow -->
-      <feFlood flood-color="white" flood-opacity="0.6" result="color"/>
-      <feComposite in="color" in2="blur" operator="in" result="coloredBlur"/>
-      <!-- merge with original fill -->
+        + `    <filter id="cloud-glow" x="-200%" y="-200%" width="400%" height="400%">
+      <!-- Blur a solid white rectangle, independent of the main rect -->
+      <feFlood flood-color="white" flood-opacity="0.15" result="glowColor"/>
+      <feComposite in="glowColor" in2="SourceAlpha" operator="over" result="glowBase"/>
+      <feGaussianBlur in="glowBase" stdDeviation="100" result="blurredGlow"/>
+      
+      <!-- Merge with original rectangle -->
       <feMerge>
-        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="blurredGlow"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
-    </filter>
-`
+    </filter>`
         ;
 
     const defs = softNotes ? `<defs>\n${blurFilters}\n</defs>` : undefined;
