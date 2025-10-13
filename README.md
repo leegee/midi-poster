@@ -1,20 +1,12 @@
-# midi-poster
+# SolidStart
 
-To install dependencies:
+    [Client: SolidStart page/component]
+    - Upload MIDI(s)
+    - Adjust controls: reverb, blur, soft notes, double layer, etc.
+    - Generate preview SVG (fast, in browser)
+    - Send parameters + MIDI to server for high-quality PNG
 
-```bash
-bun install
-```
-
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.2.22. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
-
-## Bibliography
-
-* https://www.kunstderfuge.com/beethoven/variae.htm#Symphonies
-
+    [Server route: /api/render]
+    - Receives MIDI(s) + render options
+    - Uses Sharp / libvips to generate PNG
+    - Returns PNG to client
