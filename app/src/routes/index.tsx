@@ -65,7 +65,7 @@ export default function Home() {
 
   return (
     <>
-      <nav class="left" style={{ width: 'clamp(240pt,20vw,420px)', padding: '0.5rem' }}>
+      <nav class="left controls" style={{ width: 'clamp(240pt,20vw,420px)', padding: '0.5rem' }}>
         <fieldset class="tiny-padding">
           <button class="small">
             <i>attach_file</i>
@@ -83,34 +83,38 @@ export default function Home() {
 
         {/* Dimensions */}
         <fieldset class="tiny-padding border">
-          <legend>Dimensions</legend>
+          <legend>Processing Dimensions</legend>
           <div class="paired-row">
             <div class="field">
               <label>Width</label>
-              <input type="number" class="input"
+              <input type="number" class="input border no-padding"
                 value={args().width}
                 onBlur={e => updateArg("width", +e.currentTarget.value)}
               />
             </div>
             <div class="field">
               <label>Height</label>
-              <input type="number" class="input"
+              <input type="number" class="input border no-padding"
                 value={args().height}
                 onBlur={e => updateArg("height", +e.currentTarget.value)}
               />
             </div>
           </div>
+        </fieldset>
+
+        <fieldset class="tiny-padding border">
+          <legend>Target Dimensions</legend>
           <div class="paired-row">
             <div class="field">
-              <label>Target Width</label>
-              <input type="number" class="input"
+              <label>Width</label>
+              <input type="number" class="input border no-padding"
                 value={args().targetWidth}
                 onBlur={e => updateArg("targetWidth", +e.currentTarget.value)}
               />
             </div>
             <div class="field">
-              <label>Target Height</label>
-              <input type="number" class="input"
+              <label>Height</label>
+              <input type="number" class="input border no-padding"
                 value={args().targetHeight}
                 onBlur={e => updateArg("targetHeight", +e.currentTarget.value)}
               />
@@ -133,15 +137,18 @@ export default function Home() {
 
           <div class="paired-row">
             <div class="field">
-              <label>Soft Note Factor</label>
-              <input type="number" class="input"
+              <label>Soft Factor</label>
+              <div class="tooltip">Soft note factor</div>
+
+              <input type="number" class="input border no-padding"
                 value={args().softNoteFactor}
                 onBlur={e => updateArg("softNoteFactor", +e.currentTarget.value)}
               />
             </div>
             <div class="field">
-              <label>Note Scale Factor</label>
-              <input type="number" class="input"
+              <label>Scale Factor</label>
+              <div class="tooltip">Note scale factor</div>
+              <input type="number" class="input border no-padding"
                 value={args().noteScaleFactor}
                 onBlur={e => updateArg("noteScaleFactor", +e.currentTarget.value)}
               />
@@ -151,17 +158,17 @@ export default function Home() {
           <div class="paired-row">
             <div class="field">
               <label>Min Note Height</label>
-              <input type="number" class="input" min={0} max={1000}
+              <input type="number" class="input border no-padding" min={0} max={1000}
                 value={args().minNoteHeight}
                 onBlur={e => updateArg("minNoteHeight", +e.currentTarget.value)}
               />
             </div>
 
-            <div class="field middle-align extra-padding top-padding">
+            <div class="field">
               <nav>
-                <div class="max">
+                <label class="max">
                   <p>Velocity Scaled Height</p>
-                </div>
+                </label>
                 <label class="switch">
                   <input type="checkbox"
                     checked={args().velocityScaledHeight}
@@ -180,13 +187,13 @@ export default function Home() {
           <legend>Density & Effects</legend>
           <div class="paired-row">
             <div class="field">
-              <label>Density Scale Factor</label>
-              <input type="number" class="input"
+              <label>Density Scale</label>
+              <input type="number" class="input border no-padding"
                 value={args().densityScaleFactor}
                 onBlur={e => updateArg("densityScaleFactor", +e.currentTarget.value)}
               />
             </div>
-            <div class="field">
+            <div class="field border">
               <label>Reverb Intensity</label>
               <input type="range" class="range" min="0" max="5" step="0.1"
                 value={args().reverbIntensity}
@@ -198,7 +205,7 @@ export default function Home() {
           <div class="paired-row">
             <div class="field">
               <label>Blur</label>
-              <input type="number" class="input"
+              <input type="number" class="input border no-padding"
                 value={args().blur}
                 onBlur={e => updateArg("blur", +e.currentTarget.value)}
               />
@@ -212,8 +219,8 @@ export default function Home() {
             </div>
           </div>
 
-          <div class="field border tiny-padding middle-align center-align" style={`background-color:${args().background}`}>
-            <label>Background</label>
+          <div class="field tiny-padding middle-align center-align" style={`background-color:${args().background}`}>
+            <h6 class="small">Background</h6>
             <input type="color" class="input"
               value={args().background}
               onBlur={e => updateArg("background", e.currentTarget.value)}
