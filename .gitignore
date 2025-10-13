@@ -1,3 +1,6 @@
+midi/*.midi
+.svg
+
 dist
 .wrangler
 .output
