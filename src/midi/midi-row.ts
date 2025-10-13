@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { RenderOptions, type RenderedMidi } from "./midi-render";
+import { renderDensityFeatures } from "~/lib/density-feature";
 
 export async function writeSvg(
     svg: string,
@@ -25,6 +26,7 @@ export function createSvg(
         .join("\n");
 
     let content = "";
+    let featureOverlay = "";
     let xOffset = 0;
 
     for (const midi of renderedMidis) {
@@ -36,26 +38,31 @@ export function createSvg(
                 content += `<rect x="${rect.x}" y="${rect.y}" width="${rect.w}" height="${rect.h}" fill="${rect.color}" ${filter} rx="${rect.rx ?? 0}" ry="${rect.ry ?? 0}" style="${fgBlend}"/> `;
             }
         }
+
+        if (midi.features?.length && options.renderFeatures) {
+            featureOverlay += renderDensityFeatures(midi.features, midi.width, midi.height);
+        }
+
         xOffset += midi.width;
     }
 
-    // Use intrinsic size unless explicit targetWidth / targetHeight given
-    const width = totalMidiWidth;
-    const height = totalHeight;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" 
+      width="${totalMidiWidth}" 
+      height="${totalHeight}" 
+      viewBox="0 0 ${totalMidiWidth} ${totalHeight}">
+      <rect width="100%" height="100%" fill="${background}" />
+      ${combinedDefs}
+      ${content}
+      ${featureOverlay}
+    </svg>`;
 
     return {
-        totalMidiWidth: totalMidiWidth,
-        totalHeight: totalHeight,
-        svg: `<svg xmlns="http://www.w3.org/2000/svg" 
-  width="${width}" 
-  height="${height}" 
-  viewBox="0 0 ${totalMidiWidth} ${totalHeight}">
-  <rect width="100%" height="100%" fill="${background}" />
-  ${combinedDefs}
-  ${content}
-</svg>`
+        totalMidiWidth,
+        totalHeight,
+        svg
     };
 }
+
 
 
 

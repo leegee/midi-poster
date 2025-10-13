@@ -1,6 +1,7 @@
 // midi-render.ts
 import { type Midi } from "@tonejs/midi";
 import { FAMILY_COLOR, trackNameToFamily } from "../colours";
+import { DensityCell, DensityFeature } from "~/lib/density-feature";
 
 export const TRACK_SKIP_RE = /^(http|by |Copyright|All Rights)/i;
 
@@ -33,6 +34,13 @@ export interface RenderedMidi {
     tracks: TrackInfo[];
     defs?: string;
     blur?: number;
+    density?: DensityCell[];
+    densityMeta?: {
+        timeStep: number;
+        pitchStep: number;
+        maxDensity: number;
+    };
+    features?: DensityFeature[];
 }
 
 export interface RenderOptions {
@@ -58,6 +66,7 @@ export interface RenderOptions {
     double?: boolean;
     background?: string;
     topLayerNoBlur?: boolean;
+    renderFeatures?: boolean;
 }
 
 function makeStarPoints(cx: number, cy: number, radius: number, spikes = 12): string {
@@ -246,5 +255,25 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         });
     }
 
-    return { width: targetWidth, height: targetHeight, rects, tracks, defs };
+    const density: DensityCell[] = [];
+    for (const [key, value] of densityMap.entries()) {
+        const [t, pitch] = key.split(":").map(Number);
+        density.push({
+            t,
+            pitch,
+            value,
+            norm: value / maxDensity,
+        });
+    }
+
+    return {
+        width: targetWidth,
+        height: targetHeight,
+        rects,
+        tracks,
+        defs,
+        density,
+        densityMeta: { timeStep, pitchStep, maxDensity }
+    };
+
 }
