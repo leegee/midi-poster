@@ -12,9 +12,9 @@ export async function writeSvg(
 
 export function createSvg(
     renderedMidis: RenderedMidi[],
-    options: RenderOptions = {}
+    options: RenderOptions & { margin?: number } = {}
 ) {
-    const { blendMode, background = "#FFF", topLayerNoBlur = false } = options;
+    const { blendMode, background = "#FFF", topLayerNoBlur = false, margin = 20 } = options;
     const fgBlend = blendMode ? `mix-blend-mode:${blendMode};` : "";
 
     const totalMidiWidth = renderedMidis.reduce((acc, r) => acc + r.width, 0);
@@ -39,7 +39,6 @@ export function createSvg(
             }
         }
 
-        console.log('xxx', midi, midi.features?.length, options.renderFeatures)
         if (midi.features?.length && options.renderFeatures) {
             featureOverlay += renderDensityFeatures(midi.features, midi.width, midi.height);
         }
@@ -47,22 +46,26 @@ export function createSvg(
         xOffset += midi.width;
     }
 
+    // Wrap all content in a <g> to apply margin
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" 
-      width="${totalMidiWidth}" 
-      height="${totalHeight}" 
-      viewBox="0 0 ${totalMidiWidth} ${totalHeight}">
+      width="${totalMidiWidth + margin * 2}" 
+      height="${totalHeight + margin * 2}" 
+      viewBox="0 0 ${totalMidiWidth + margin * 2} ${totalHeight + margin * 2}">
       <rect width="100%" height="100%" fill="${background}" />
       ${combinedDefs}
-      ${content}
-      ${featureOverlay}
+      <g transform="translate(${margin}, ${margin})">
+        ${content}
+        ${featureOverlay}
+      </g>
     </svg>`;
 
     return {
-        totalMidiWidth,
-        totalHeight,
+        totalMidiWidth: totalMidiWidth + margin * 2,
+        totalHeight: totalHeight + margin * 2,
         svg
     };
 }
+
 
 
 

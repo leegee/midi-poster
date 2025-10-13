@@ -1,6 +1,6 @@
 // midi-render.ts
 import { type Midi } from "@tonejs/midi";
-import { FAMILY_COLOR, trackNameToFamily } from "../colours";
+import { getFamilyColor, trackNameToFamily } from "../colours";
 import { DensityCell, DensityFeature } from "~/lib/density-feature";
 
 export const TRACK_SKIP_RE = /^(http|by |Copyright|All Rights)/i;
@@ -145,7 +145,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         const trackName = track.name || track.instrument.name || "";
         if (trackName.match(TRACK_SKIP_RE)) continue;
         const familyKey = trackNameToFamily(trackName);
-        const color = FAMILY_COLOR[familyKey] ?? FAMILY_COLOR.default ?? "#ffffff";
+        const color = getFamilyColor(familyKey) ?? getFamilyColor('default') ?? "#ffffff";
 
         console.log(`${trackName} ... ${color}`);
 
@@ -218,7 +218,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         const density = localMax / maxDensity;
 
         const hFinal = r.hBase * (1 + densityScaleFactor * density);
-        const shape: "rect" | "star" = ["cymbals"].includes(r.trackFamily) ? "star" : "rect";
+        let shape: "rect" | "star" = ["cymbals"].includes(r.trackFamily) ? "star" : "rect";
         const wFinal = shape === "star" ? hFinal * STAR_SCALE : r.wBase;
 
         // Compute yFinal
@@ -228,7 +228,9 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
             const minT = Math.min(...timpaniNotes.map(n => n.note.midi));
             const maxT = Math.max(...timpaniNotes.map(n => n.note.midi));
             const bottomRange = height * 0.2;
-            yFinal = ((maxT - r.note.midi) / (maxT - minT)) * bottomRange + (height - bottomRange);
+            yFinal = 3 * ((maxT - r.note.midi) / (maxT - minT)) * bottomRange + (height - bottomRange)
+                - height / 1.66;
+            shape = "star";
         } else if (shape === "star") {
             yFinal = height / 2 - hFinal / 2;
         } else {
@@ -249,7 +251,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         const blurIndex = softNotes ? Math.max(0, 4 - Math.floor((r.note.velocity ?? 0) * 5)) : 0;
         const filterId = softNotes ? `url(#blur${blurIndex})` : undefined;
 
-        let color = FAMILY_COLOR[r.trackFamily] ?? FAMILY_COLOR.default ?? "#ffffff";
+        let color = getFamilyColor(r.trackFamily) ?? getFamilyColor("default") ?? "#ffffff";
         if (color.startsWith("hsl")) {
             color = color.replace(/(\d+)%\)$/i, (match, l) => `${Math.min(100, +l + (100 - +l) * 0.3 * density)}% )`);
         } else if (color.startsWith("rgb")) {

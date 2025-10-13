@@ -1,9 +1,10 @@
-import { createEffect, createSignal, Show } from "solid-js";
+import { createEffect, createSignal, Show, onCleanup } from "solid-js";
 import { renderMidi, type RenderOptions } from "~/midi/midi-render";
 import { createSvg } from "~/midi/midi-row";
 import debounce from "just-debounce";
 import { busyStore } from "~/stores/busy-store";
 import { extractDensityFeatures } from "~/lib/density-feature";
+import { Canvg } from "canvg";
 
 type Props = {
     title: string;
@@ -12,9 +13,15 @@ type Props = {
 };
 
 export default function MIDI2SVG(props: Props) {
-    const [svg, setSvg] = createSignal<string | null>(null);
+    const [pngUrl, setPngUrl] = createSignal<string | null>(null);
     const [currentCallId, setCurrentCallId] = createSignal(-1);
     let lastProps: { files: string[]; args: any } | null = null;
+
+    // Ensure we clean up previous object URLs
+    onCleanup(() => {
+        const url = pngUrl();
+        if (url) URL.revokeObjectURL(url);
+    });
 
     const propsChanged = (files: File[], args: Props["args"]) => {
         const fileNames = files.map(f => f.name);
@@ -23,7 +30,6 @@ export default function MIDI2SVG(props: Props) {
         for (let i = 0; i < fileNames.length; i++) {
             if (fileNames[i] !== lastProps.files[i]) return true;
         }
-        // Shallow compare args (fine for primitives)
         const argKeys = Object.keys(args);
         const lastArgs = lastProps.args;
         if (argKeys.length !== Object.keys(lastArgs).length) return true;
@@ -34,7 +40,7 @@ export default function MIDI2SVG(props: Props) {
     };
 
     const debouncedRender = debounce(async (files: File[], args: Props["args"]) => {
-        if (!files.length) return setSvg(null);
+        if (!files.length) return setPngUrl(null);
 
         try {
             busyStore.setBusy(true);
@@ -49,12 +55,39 @@ export default function MIDI2SVG(props: Props) {
                     rendered.densityMeta,
                     rendered.width,
                     rendered.height,
-                    5 // top N features
+                    5
                 );
             }
 
-            const svgStr = createSvg([rendered], args).svg;
-            setSvg(svgStr);
+            const { svg } = createSvg([rendered], args);
+
+            // Read dimensions for accurate canvas size
+            const sizeMatch = svg.match(/width="(\d+)"[^>]*height="(\d+)"/);
+            const canvas = document.createElement("canvas");
+            if (sizeMatch) {
+                canvas.width = parseInt(sizeMatch[1]);
+                canvas.height = parseInt(sizeMatch[2]);
+            } else {
+                canvas.width = 1000;
+                canvas.height = 500;
+            }
+
+            const ctx = canvas.getContext("2d")!;
+            const v = await Canvg.from(ctx, svg);
+            await v.render();
+
+            const blob = await new Promise<Blob | null>(resolve =>
+                canvas.toBlob(resolve, "image/png")
+            );
+
+            if (blob) {
+                // Revoke previous URL before creating a new one
+                const prev = pngUrl();
+                if (prev) URL.revokeObjectURL(prev);
+
+                const url = URL.createObjectURL(blob);
+                setPngUrl(url);
+            }
         } finally {
             busyStore.setBusy(false);
         }
@@ -62,14 +95,10 @@ export default function MIDI2SVG(props: Props) {
 
     createEffect(() => {
         const { midiFiles, args } = props;
-
-        if (!midiFiles.length) return setSvg(null);
+        if (!midiFiles.length) return setPngUrl(null);
         if (args.calls < currentCallId()) return;
-
-        // Skip if nothing actually changed
         if (!propsChanged(midiFiles, args)) return;
 
-        // Remember last props snapshot
         lastProps = {
             files: midiFiles.map(f => f.name),
             args: { ...args }
@@ -80,8 +109,14 @@ export default function MIDI2SVG(props: Props) {
     });
 
     return (
-        <Show when={svg()} fallback={<p>Upload MIDI files to preview</p>}>
-            <Show when={!busyStore.busy} fallback={<p>Rendering...</p>}>
+        <Show when={pngUrl()} fallback={<p>Upload MIDI files to preview</p>}>
+            <Show when={!busyStore.busy} fallback={
+                <section class="center-align middle-align extra">
+                    <div class="shape loading-indicator extra">
+                        <img class="responsive" src="/favicon.png" />
+                    </div>
+                </section>
+            }>
                 <fieldset
                     style="display:flex; padding: 2rem; justify-content:center;"
                     class={busyStore.busy ? "busy" : ""}
@@ -90,11 +125,13 @@ export default function MIDI2SVG(props: Props) {
                         <code>{busyStore.busy ? "BUILDING" : props.title}</code>
                     </legend>
 
-                    <div
-                        innerHTML={svg()!}
+                    <img
+                        src={pngUrl()!}
+                        alt="MIDI visualization"
                         style={{
                             width: props.args.targetWidth ? `${props.args.targetWidth}px` : "auto",
-                            height: props.args.targetHeight ? `${props.args.targetHeight}px` : "auto"
+                            height: props.args.targetHeight ? `${props.args.targetHeight}px` : "auto",
+                            "image-rendering": "crisp-edges"
                         }}
                     />
                 </fieldset>

@@ -1,3 +1,4 @@
+const TOP_N_FEATURES = 10;
 export interface DensityFeature {
     x: number;
     y: number;
@@ -20,7 +21,7 @@ export function extractDensityFeatures(
     meta: { timeStep: number; pitchStep: number },
     width: number,
     height: number,
-    topN = 5,
+    topN = TOP_N_FEATURES,
 ): DensityFeature[] {
     // Convert to a 2D grid
     const timeBins = Math.max(...density.map(d => d.t)) + 1;
@@ -107,9 +108,8 @@ export function renderDensityFeatures(
 
     return features
         .map(f => {
-            const hue = Math.round(200 + 80 * f.maxDensity);
-            const opacity = 0.25 + 0.5 * f.avgDensity; // scale alpha by density
-
+            // const hue = Math.round(200 + 80 * f.maxDensity);
+            // const opacity = 0.25 + 0.5 * f.avgDensity; // scale alpha by density
             //   fill="hsla(${hue},70%,70%,${opacity.toFixed(2)})" 
             //   fill="hsla(${hue},70%,70%,${opacity})"
             //   stroke="hsla(${hue},50%,90%,${opacity.toFixed(2)})" 
