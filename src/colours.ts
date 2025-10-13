@@ -1,27 +1,35 @@
 export const NAME_TO_FAMILY: [RegExp, string][] = [
     // Woodwinds
+    [/^(piccolo)/i, "piccolo"],
     [/^(flauti|flute|ottavino)/i, "flute"],
     [/^(oboi|oboe)/i, "oboe"],
     [/^(clarin)/i, "clarinet"],
     [/^(fagotti|bassoon)/i, "bassoon"],
-    [/^(contro)/i, "contraBassoon"],
+    [/^(contra-?fagot|contro)/i, "contraBassoon"],
 
     // Brass
     [/^(corni|horn)/i, "horn"],
     [/^(trombe|trumpet)/i, "trumpet"],
-    [/^(trombone)/i, "trombone"],
+    [/^(trombone|tromboni)/i, "trombone"], // Contrafagot
 
     // Percussion
     [/^(timpani|percussion)/i, "timpani"],
-    [/^(cymbals|sizzle)/i, "cymbals"],
+    [/^(piatti|cymbals|sizzle)/i, "cymbals"],
 
     // Strings
     [/^(violini|violin)/i, "violin"],
     [/^(viole|viola)/i, "viola"],
     [/^(violoncelli|violoncello|cello|celli)/i, "cello"],
-    [/^(contrabassi|double bass)/i, "bass"],
+    [/^(contrabassi|double bass|bass)/i, "bass"],
     [/^(pizzicato strings)/i, "pizzicato"],
     [/^(tremolo strings)/i, "violin"],
+
+    // Voice
+    [/^(soprano)/i, "soprano"],
+    [/^(alto)/i, "alto"],
+    [/^(tenor)/i, "tenor"],
+    [/^(baritone)/i, "baritone"],
+    [/^(bass)/i, "bassVoice"],
 
     // Keyboard / Synth
     [/^(synthstrings 1|synth|pad)/i, "synth"],
@@ -30,9 +38,10 @@ export const NAME_TO_FAMILY: [RegExp, string][] = [
 
 export const FAMILY_COLOR: Record<string, string> = {
     // Woodwinds
+    piccolo: "hsla(180,70%,60%, 0.9)",
     flute: "hsla(200,70%,70%, 0.9)",
     oboe: "hsla(210,60%,55%, 0.9)",
-    clarinet: "hsla(180,50%,65%, 0.9)",
+    clarinet: "hsla(140,50%,65%, 0.9)",
     bassoon: "hsla(190,70%,45%, 0.9)",
     contraBassoon: "hsla(190,70%,35%, 0.9)",
 
@@ -55,6 +64,13 @@ export const FAMILY_COLOR: Record<string, string> = {
     // Keyboard / Synth
     piano: "hsl(0,0%,45%)",
     synth: "hsl(270,40%,60%)",
+
+    // Voice
+    soprano: "hsl(200,50%,50%)",
+    alto: "hsl(140,50%,50%)",
+    tenor: "hsl(70,50%,50%)",
+    baritone: "hsl(30,50%,50%)",
+    bassVoice: "hsl(2,60%,50%)",
 
     default: "hsl(0,0%,55%)",
 };

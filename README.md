@@ -10,3 +10,5 @@
     - Receives MIDI(s) + render options
     - Uses Sharp / libvips to generate PNG
     - Returns PNG to client
+
+ https://www.kunstderfuge.com/beethoven/variae.htm#Symphonies
