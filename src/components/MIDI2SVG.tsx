@@ -13,8 +13,25 @@ type Props = {
 export default function MIDI2SVG(props: Props) {
     const [svg, setSvg] = createSignal<string | null>(null);
     const [currentCallId, setCurrentCallId] = createSignal(-1);
+    let lastProps: { files: string[]; args: any } | null = null;
 
-    // Debounced render function
+    const propsChanged = (files: File[], args: Props["args"]) => {
+        const fileNames = files.map(f => f.name);
+        if (!lastProps) return true;
+        if (fileNames.length !== lastProps.files.length) return true;
+        for (let i = 0; i < fileNames.length; i++) {
+            if (fileNames[i] !== lastProps.files[i]) return true;
+        }
+        // Shallow compare args (fine for primitives)
+        const argKeys = Object.keys(args);
+        const lastArgs = lastProps.args;
+        if (argKeys.length !== Object.keys(lastArgs).length) return true;
+        for (const key of argKeys) {
+            if (args[key as keyof typeof args] !== lastArgs[key]) return true;
+        }
+        return false;
+    };
+
     const debouncedRender = debounce(async (files: File[], args: Props["args"]) => {
         if (!files.length) return setSvg(null);
 
@@ -26,29 +43,43 @@ export default function MIDI2SVG(props: Props) {
             const rendered = renderMidi(midis[0], args);
             const svgStr = createSvg([rendered], args).svg;
             setSvg(svgStr);
-        }
-        finally {
+        } finally {
             busyStore.setBusy(false);
         }
     }, 200);
 
     createEffect(() => {
-        if (!props.midiFiles.length) return setSvg(null);
-        if (props.args.calls < currentCallId()) return;
+        const { midiFiles, args } = props;
 
-        setCurrentCallId(props.args.calls);
-        debouncedRender(props.midiFiles, props.args);
+        if (!midiFiles.length) return setSvg(null);
+        if (args.calls < currentCallId()) return;
+
+        // Skip if nothing actually changed
+        if (!propsChanged(midiFiles, args)) return;
+
+        // Remember last props snapshot
+        lastProps = {
+            files: midiFiles.map(f => f.name),
+            args: { ...args }
+        };
+
+        setCurrentCallId(args.calls);
+        debouncedRender(midiFiles, args);
     });
 
     return (
         <Show when={svg()} fallback={<p>Upload MIDI files to preview</p>}>
             <Show when={!busyStore.busy} fallback={<p>Rendering...</p>}>
-                <fieldset style="display:flex; padding: 2rem; justify-content:center;" class={busyStore.busy ? "busy" : ""}>
+                <fieldset
+                    style="display:flex; padding: 2rem; justify-content:center;"
+                    class={busyStore.busy ? "busy" : ""}
+                >
                     <legend class="large-text code border">
-                        <code>{busyStore.busy ? 'BUILDING' : props.title}</code>
+                        <code>{busyStore.busy ? "BUILDING" : props.title}</code>
                     </legend>
 
-                    <div innerHTML={svg()!}
+                    <div
+                        innerHTML={svg()!}
                         style={{
                             width: props.args.targetWidth ? `${props.args.targetWidth}px` : "auto",
                             height: props.args.targetHeight ? `${props.args.targetHeight}px` : "auto"
