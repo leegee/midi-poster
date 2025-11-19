@@ -102,22 +102,39 @@ export default function Home() {
       <nav class={"left controls left-margin " + (busyStore.busy ? " busy " : "")}>
         <header>
           <nav>
-            <button class="small">
+            <button class={"small circle " + (midiFiles().length > 0 ? 'transparent' : '')}>
               <i>attach_file</i>
-              <span>MIDI File(s)</span>
               <input type="file" multiple accept=".mid" onChange={handleFiles} />
               <div class="tooltip bottom">Add one or more MIDI files</div>
             </button>
 
+            <div class="group">
+              <button class={"small no-margin left-round " + (activeTab() === "overview" ? "" : "border")}
+                onClick={() => setActiveTab("overview")}
+              >
+                <i>info</i>
+                <div class="tooltip bottom">Overview</div>
+              </button>
+
+              <button class={"small no-margin right-round " + (activeTab() === "colors" ? "" : "border")}
+                onClick={() => setActiveTab("colors")}
+              >
+                <i>palette</i>
+                <div class="tooltip bottom">Colours</div>
+              </button>
+            </div>
+
             <Show when={midiFiles().length > 0}>
-              <button class="small circle" onClick={() => args().calls ? args().calls++ : args().calls = 0}>
-                <i>autorenew</i>
-                <div class="tooltip bottom">Force a re-render</div>
-              </button>
-              <button class="small circle" onClick={renderServerPngs}>
-                <i>download</i>
-                <div class="tooltip bottom">Download PNGs</div>
-              </button>
+              <div class="group">
+                <button class="small no-margin left-round" onClick={() => args().calls ? args().calls++ : args().calls = 0}>
+                  <i>autorenew</i>
+                  <div class="tooltip bottom">Force a re-render</div>
+                </button>
+                <button class="small no-margin right-round" onClick={renderServerPngs}>
+                  <i>download</i>
+                  <div class="tooltip bottom">Download PNGs</div>
+                </button>
+              </div>
             </Show>
           </nav>
 
@@ -135,7 +152,7 @@ export default function Home() {
               </For>
             </section>
           </Show>
-
+          {/* 
           <div>
             <button class={"no-margin left-round " + (activeTab() === "overview" ? "fill" : "border")}
               onClick={() => setActiveTab("overview")}
@@ -149,7 +166,7 @@ export default function Home() {
               <i>palette</i>
               <span>Colours</span>
             </button>
-          </div>
+          </div> */}
         </header>
 
         <div class="scroll border no-padding no-margin" style="height: 80vh">
