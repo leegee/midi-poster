@@ -123,8 +123,8 @@ export default function ColorPicker(props: ColorPickerProps) {
 
             {open() && (
                 <Portal>
-                    <div class="overlay blur" />
-                    <dialog class="active surface-container-high"
+                    <div class="overlay blur active" />
+                    <dialog class="surface-container-high active"
                         onClick={cancel}
                     >
                         <div
