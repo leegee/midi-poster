@@ -1,4 +1,4 @@
-import { createEffect, createSignal, Show } from "solid-js";
+import { createEffect, createSignal, Show, onCleanup } from "solid-js";
 import { renderMidi, type RenderOptions } from "~/midi/midi-render";
 import { createSvg } from "~/midi/midi-row";
 import debounce from "just-debounce";
@@ -15,9 +15,15 @@ type Props = {
 export default function MIDI2SVG(props: Props) {
     const [pngUrl, setPngUrl] = createSignal<string | null>(null);
     const [currentCallId, setCurrentCallId] = createSignal(-1);
-    let lastProps: { files: string[]; args: any } | null = null;
-    let abortController: AbortController | null = null;
 
+    let lastProps: { files: string[]; args: any } | null = null;
+
+    // renderSeq increments for each actual render attempt.
+    // Only the render that has id === latestRenderSeq is allowed to set state.
+    let renderSeq = 0;
+    let lastAbortController: AbortController | null = null;
+
+    // Helper to compare props (keeps your original semantics)
     const propsChanged = (files: File[], args: Props["args"]) => {
         const fileNames = files.map((f) => f.name);
         if (!lastProps) return true;
@@ -29,31 +35,51 @@ export default function MIDI2SVG(props: Props) {
         const lastArgs = lastProps.args;
         if (argKeys.length !== Object.keys(lastArgs).length) return true;
         for (const key of argKeys) {
+            // shallow compare; matches your original code
             if (args[key as keyof typeof args] !== lastArgs[key]) return true;
         }
         return false;
     };
 
+    // Debounced render function - wrapped to use per-render sequence id
     const debouncedRender = debounce(async (files: File[], args: Props["args"]) => {
-        if (!files.length) {
-            if (pngUrl()) URL.revokeObjectURL(pngUrl()!);
-            return setPngUrl(null);
-        }
+        // create a per-render id and controller
+        const myId = ++renderSeq;
+        setCurrentCallId(myId);
 
-        // cancel any previous render
-        abortController?.abort();
-        abortController = new AbortController();
+        // abort previous render if any (we want only one active controller at a time)
+        if (lastAbortController) {
+            try {
+                lastAbortController.abort();
+            } catch { }
+        }
+        const abortController = new AbortController();
+        lastAbortController = abortController;
         const { signal } = abortController;
 
+        // quick bail if no files
+        if (!files.length) {
+            // Only revoke/set if we're the latest render
+            if (myId === renderSeq) {
+                if (pngUrl()) URL.revokeObjectURL(pngUrl()!);
+                setPngUrl(null);
+            }
+            return;
+        }
+
         try {
-            busyStore.setBusy(true);
+            // Mark busy for this render
+            // Only set busy true if this is still the latest render (defensive)
+            if (myId === renderSeq) busyStore.setBusy(true);
 
             const { Midi } = await import("@tonejs/midi/dist/Midi.js");
-            if (signal.aborted) return;
+            if (signal.aborted || myId !== renderSeq) return;
 
             const buffers = await Promise.all(files.map((f) => f.arrayBuffer()));
+            if (signal.aborted || myId !== renderSeq) return;
+
             const midis = buffers.map((buf) => new Midi(buf));
-            if (signal.aborted) return;
+            if (signal.aborted || myId !== renderSeq) return;
 
             const rendered = renderMidi(midis[0], args);
 
@@ -68,50 +94,96 @@ export default function MIDI2SVG(props: Props) {
             }
 
             const { svg } = createSvg([rendered], args);
-            if (signal.aborted) return;
+            if (signal.aborted || myId !== renderSeq) return;
 
-            // --- future-friendly: can move this block into a worker later ---
+            // Render SVG to canvas
             const canvas = document.createElement("canvas");
             canvas.width = Number(args.targetWidth ?? args.width);
             canvas.height = Number(args.targetHeight ?? args.height);
             const ctx = canvas.getContext("2d", { willReadFrequently: false })!;
             const v = await Canvg.from(ctx, svg);
-
-            if (signal.aborted) return;
+            if (signal.aborted || myId !== renderSeq) return;
             await v.render();
+            if (signal.aborted || myId !== renderSeq) return;
 
-            if (signal.aborted) return;
-
+            // Convert canvas to blob
             const blob = await new Promise<Blob | null>((resolve) =>
                 canvas.toBlob(resolve, "image/png")
             );
-            if (signal.aborted) return;
+            if (signal.aborted || myId !== renderSeq) return;
 
             if (blob) {
-                // revoke previous URL to prevent memory leaks
-                if (pngUrl()) URL.revokeObjectURL(pngUrl()!);
-                const url = URL.createObjectURL(blob);
-                setPngUrl(url);
+                // Only the latest render may set the URL
+                if (myId === renderSeq) {
+                    // revoke previous URL (prevent leaks)
+                    if (pngUrl()) {
+                        try {
+                            URL.revokeObjectURL(pngUrl()!);
+                        } catch { }
+                    }
+                    const url = URL.createObjectURL(blob);
+                    setPngUrl(url);
+                } else {
+                    // Not latest: revoke blob URL immediately to avoid leak
+                    // (we created no URL, but if we had, revoke it)
+                }
             }
         } catch (err: any) {
-            if (err.name !== "AbortError") console.error("Render failed:", err);
+            // if aborted, ignore; otherwise log
+            if (err?.name !== "AbortError") console.error("Render failed:", err);
         } finally {
-            busyStore.setBusy(false);
-        }
-    }, 300); // slightly increased to avoid rapid retriggers
+            // only the latest render should clear busy flag so we don't prematurely stop busy while a newer render is still running
+            if (myId === renderSeq) busyStore.setBusy(false);
 
+            // If this controller is still the lastAbortController, clear it
+            if (lastAbortController === abortController) lastAbortController = null;
+        }
+    }, 300);
+
+    // If component unmounts: abort any in-flight render and revoke URL
+    onCleanup(() => {
+        try {
+            if (lastAbortController) lastAbortController.abort();
+        } catch { }
+        if (pngUrl()) {
+            try {
+                URL.revokeObjectURL(pngUrl()!);
+            } catch { }
+        }
+
+        // If just-debounce provides a cancel, call it defensively
+        // (just-debounce doesn't guarantee an API, so guard)
+        try {
+            // @ts-ignore - some debounce implementations provide cancel
+            debouncedRender.cancel?.();
+        } catch { }
+    });
+
+    // watch props and trigger debounced render
     createEffect(() => {
         const { midiFiles, args } = props;
-        if (!midiFiles.length) return setPngUrl(null);
-        if (args.calls < currentCallId()) return;
+
+        // if no files: clear existing url (only if there's one)
+        if (!midiFiles.length) {
+            if (pngUrl()) {
+                try {
+                    URL.revokeObjectURL(pngUrl()!);
+                } catch { }
+            }
+            setPngUrl(null);
+            return;
+        }
+
+        // avoid redundant renders if nothing meaningful changed
         if (!propsChanged(midiFiles, args)) return;
 
+        // store lastProps as plain data for future diffing (this is ok — you're not spreading props into reactive state)
         lastProps = {
             files: midiFiles.map((f) => f.name),
             args: { ...args },
         };
 
-        setCurrentCallId(args.calls);
+        // call debounced render
         debouncedRender(midiFiles, args);
     });
 
@@ -139,12 +211,8 @@ export default function MIDI2SVG(props: Props) {
                         src={pngUrl()!}
                         alt="MIDI visualization"
                         style={{
-                            width: props.args.targetWidth
-                                ? `${props.args.targetWidth}px`
-                                : "auto",
-                            height: props.args.targetHeight
-                                ? `${props.args.targetHeight}px`
-                                : "auto",
+                            width: props.args.targetWidth ? `${props.args.targetWidth}px` : "auto",
+                            height: props.args.targetHeight ? `${props.args.targetHeight}px` : "auto",
                             "image-rendering": "crisp-edges",
                         }}
                     />
