@@ -1,4 +1,4 @@
-import { createEffect, createSignal, Show, onCleanup } from "solid-js";
+import { createEffect, createSignal, Show } from "solid-js";
 import { renderMidi, type RenderOptions } from "~/midi/midi-render";
 import { createSvg } from "~/midi/midi-row";
 import debounce from "just-debounce";
@@ -16,15 +16,10 @@ export default function MIDI2SVG(props: Props) {
     const [pngUrl, setPngUrl] = createSignal<string | null>(null);
     const [currentCallId, setCurrentCallId] = createSignal(-1);
     let lastProps: { files: string[]; args: any } | null = null;
-
-    // Ensure we clean up previous object URLs
-    onCleanup(() => {
-        const url = pngUrl();
-        if (url) URL.revokeObjectURL(url);
-    });
+    let abortController: AbortController | null = null;
 
     const propsChanged = (files: File[], args: Props["args"]) => {
-        const fileNames = files.map(f => f.name);
+        const fileNames = files.map((f) => f.name);
         if (!lastProps) return true;
         if (fileNames.length !== lastProps.files.length) return true;
         for (let i = 0; i < fileNames.length; i++) {
@@ -40,13 +35,26 @@ export default function MIDI2SVG(props: Props) {
     };
 
     const debouncedRender = debounce(async (files: File[], args: Props["args"]) => {
-        if (!files.length) return setPngUrl(null);
+        if (!files.length) {
+            if (pngUrl()) URL.revokeObjectURL(pngUrl()!);
+            return setPngUrl(null);
+        }
+
+        // cancel any previous render
+        abortController?.abort();
+        abortController = new AbortController();
+        const { signal } = abortController;
 
         try {
             busyStore.setBusy(true);
+
             const { Midi } = await import("@tonejs/midi/dist/Midi.js");
-            const buffers = await Promise.all(files.map(f => f.arrayBuffer()));
-            const midis = buffers.map(buf => new Midi(buf));
+            if (signal.aborted) return;
+
+            const buffers = await Promise.all(files.map((f) => f.arrayBuffer()));
+            const midis = buffers.map((buf) => new Midi(buf));
+            if (signal.aborted) return;
+
             const rendered = renderMidi(midis[0], args);
 
             if (rendered.density && rendered.densityMeta) {
@@ -60,38 +68,37 @@ export default function MIDI2SVG(props: Props) {
             }
 
             const { svg } = createSvg([rendered], args);
+            if (signal.aborted) return;
 
-            // Read dimensions for accurate canvas size
-            const sizeMatch = svg.match(/width="(\d+)"[^>]*height="(\d+)"/);
+            // --- future-friendly: can move this block into a worker later ---
             const canvas = document.createElement("canvas");
-            if (sizeMatch) {
-                canvas.width = parseInt(sizeMatch[1]);
-                canvas.height = parseInt(sizeMatch[2]);
-            } else {
-                canvas.width = 1000;
-                canvas.height = 500;
-            }
-
-            const ctx = canvas.getContext("2d")!;
+            canvas.width = Number(args.targetWidth ?? args.width);
+            canvas.height = Number(args.targetHeight ?? args.height);
+            const ctx = canvas.getContext("2d", { willReadFrequently: false })!;
             const v = await Canvg.from(ctx, svg);
+
+            if (signal.aborted) return;
             await v.render();
 
-            const blob = await new Promise<Blob | null>(resolve =>
+            if (signal.aborted) return;
+
+            const blob = await new Promise<Blob | null>((resolve) =>
                 canvas.toBlob(resolve, "image/png")
             );
+            if (signal.aborted) return;
 
             if (blob) {
-                // Revoke previous URL before creating a new one
-                const prev = pngUrl();
-                if (prev) URL.revokeObjectURL(prev);
-
+                // revoke previous URL to prevent memory leaks
+                if (pngUrl()) URL.revokeObjectURL(pngUrl()!);
                 const url = URL.createObjectURL(blob);
                 setPngUrl(url);
             }
+        } catch (err: any) {
+            if (err.name !== "AbortError") console.error("Render failed:", err);
         } finally {
             busyStore.setBusy(false);
         }
-    }, 200);
+    }, 300); // slightly increased to avoid rapid retriggers
 
     createEffect(() => {
         const { midiFiles, args } = props;
@@ -100,8 +107,8 @@ export default function MIDI2SVG(props: Props) {
         if (!propsChanged(midiFiles, args)) return;
 
         lastProps = {
-            files: midiFiles.map(f => f.name),
-            args: { ...args }
+            files: midiFiles.map((f) => f.name),
+            args: { ...args },
         };
 
         setCurrentCallId(args.calls);
@@ -110,13 +117,16 @@ export default function MIDI2SVG(props: Props) {
 
     return (
         <Show when={pngUrl()} fallback={<p>Upload MIDI files to preview</p>}>
-            <Show when={!busyStore.busy} fallback={
-                <section class="center-align middle-align extra">
-                    <div class="shape loading-indicator extra">
-                        <img class="responsive" src="/favicon.png" />
-                    </div>
-                </section>
-            }>
+            <Show
+                when={!busyStore.busy}
+                fallback={
+                    <section class="center-align middle-align extra">
+                        <div class="shape loading-indicator extra">
+                            <img class="responsive" src="/favicon.png" />
+                        </div>
+                    </section>
+                }
+            >
                 <fieldset
                     style="display:flex; padding: 2rem; justify-content:center;"
                     class={busyStore.busy ? "busy" : ""}
@@ -129,9 +139,13 @@ export default function MIDI2SVG(props: Props) {
                         src={pngUrl()!}
                         alt="MIDI visualization"
                         style={{
-                            width: props.args.targetWidth ? `${props.args.targetWidth}px` : "auto",
-                            height: props.args.targetHeight ? `${props.args.targetHeight}px` : "auto",
-                            "image-rendering": "crisp-edges"
+                            width: props.args.targetWidth
+                                ? `${props.args.targetWidth}px`
+                                : "auto",
+                            height: props.args.targetHeight
+                                ? `${props.args.targetHeight}px`
+                                : "auto",
+                            "image-rendering": "crisp-edges",
                         }}
                     />
                 </fieldset>
