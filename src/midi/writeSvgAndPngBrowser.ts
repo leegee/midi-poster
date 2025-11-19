@@ -1,7 +1,12 @@
-import type { SvgWriterOptions } from "./writeSvgAndPng";
+export interface SvgWriterOptions {
+    svg: string;
+    outputPath?: string;   // only used in Node
+    width?: number;
+    height?: number;
+}
 
 export async function writeSvgAndPngBrowser({ svg, width, height }: SvgWriterOptions) {
-    // 1. Create SVG Blob and load as image
+    // Create SVG Blob and load as image
     const blob = new Blob([svg], { type: "image/svg+xml" });
     const url = URL.createObjectURL(blob);
     const img = new Image();
@@ -10,14 +15,12 @@ export async function writeSvgAndPngBrowser({ svg, width, height }: SvgWriterOpt
         img.src = url;
     });
 
-    // 2. Draw to canvas
     const canvas = document.createElement("canvas");
     canvas.width = width || img.width;
     canvas.height = height || img.height;
     const ctx = canvas.getContext("2d")!;
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-    // 3. Helper to download
     function download(blob: Blob, filename: string) {
         const a = document.createElement("a");
         a.download = filename;
@@ -26,7 +29,7 @@ export async function writeSvgAndPngBrowser({ svg, width, height }: SvgWriterOpt
         URL.revokeObjectURL(a.href);
     }
 
-    // 4. Trigger downloads
+    // Trigger downloads
     download(blob, "render.svg");
     const pngBlob = await new Promise<Blob>(res => canvas.toBlob(b => res(b!), "image/png"));
     download(pngBlob, "render.png");
