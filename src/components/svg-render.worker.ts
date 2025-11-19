@@ -23,14 +23,13 @@ self.onmessage = async (ev: MessageEvent<RenderRequest>) => {
     const height = Number(ev.data.height);
 
     try {
-        // OffscreenCanvas for workers
+        // OffscreenCanvas for worker
         const canvas = new OffscreenCanvas(width | 0, height | 0);
         const ctx = canvas.getContext('2d');
         if (!ctx) throw new Error('Cannot get 2D context');
 
         const v = await Canvg.from(ctx, svg, preset);
 
-        // Render only first frame, ignoring animation/mouse
         await v.render();
 
         const blob = await canvas.convertToBlob({ type: 'image/png' });
