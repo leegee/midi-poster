@@ -99,13 +99,14 @@ export default function Home() {
 
   return (
     <>
-      <nav class={"left controls " + (busyStore.busy ? " busy " : "")}>
-        <header class="tiny-padding">
+      <nav class={"left controls left-margin " + (busyStore.busy ? " busy " : "")}>
+        <header>
           <nav>
             <button class="small">
               <i>attach_file</i>
               <span>MIDI File(s)</span>
               <input type="file" multiple accept=".mid" onChange={handleFiles} />
+              <div class="tooltip bottom">Add one or more MIDI files</div>
             </button>
 
             <Show when={midiFiles().length > 0}>
@@ -119,41 +120,40 @@ export default function Home() {
               </button>
             </Show>
           </nav>
+
+          <Show when={pngUrls().length}>
+            <section class="border padding thumbnail-grid">
+              <For each={pngUrls()}>
+                {(url, i) => (
+                  <>
+                    <a href={url} download={`render_${i() + 1}.png`} class="thumbnail-link">
+                      <img src={url} alt={`Render ${i() + 1}`} class="thumbnail-img border" />
+                    </a>
+                    <div class="tooltip">Click to download</div>
+                  </>
+                )}
+              </For>
+            </section>
+          </Show>
+
+          <div>
+            <button class={"no-margin left-round " + (activeTab() === "overview" ? "fill" : "border")}
+              onClick={() => setActiveTab("overview")}
+            >
+              <i>info</i>
+              <span>Overview</span>
+            </button>
+            <button class={"no-margin right-round " + (activeTab() === "colors" ? "fill" : "border")}
+              onClick={() => setActiveTab("colors")}
+            >
+              <i>palette</i>
+              <span>Colours</span>
+            </button>
+          </div>
         </header>
 
-        <div>
-          <button class={"no-margin left-round " + (activeTab() === "overview" ? "fill" : "border")}
-            onClick={() => setActiveTab("overview")}
-          >
-            <i>info</i>
-            <span>Overview</span>
-          </button>
-          <button class={"no-margin right-round " + (activeTab() === "colors" ? "fill" : "border")}
-            onClick={() => setActiveTab("colors")}
-          >
-            <i>palette</i>
-            <span>Colours</span>
-          </button>
-        </div>
-
-        <div class="scroll">
-
+        <div class="scroll border no-padding no-margin" style="height: 80vh">
           <div id="overview" class={`page padding ${activeTab() === "overview" ? "active" : ""}`}>
-            <section>
-              <Show when={pngUrls().length}>
-                <div class="border padding thumbnail-grid">
-                  <For each={pngUrls()}>
-                    {(url, i) => (
-                      <a href={url} download={`render_${i() + 1}.png`} class="thumbnail-link">
-                        <img src={url} alt={`Render ${i() + 1}`} class="thumbnail-img border" />
-                      </a>
-                    )}
-                  </For>
-                </div>
-              </Show>
-            </section>
-
-
             {/* Dimensions */}
             <fieldset class="tiny-padding border">
               <legend>Processing Dimensions</legend>

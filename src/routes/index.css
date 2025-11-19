@@ -145,6 +145,7 @@ p {
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.5rem;
+  margin-block-start: 0 !important;
 
   .thumbnail-link {
     display: flex;
