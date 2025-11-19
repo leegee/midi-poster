@@ -75,6 +75,8 @@ export const DEFAULT_FAMILY_COLOR: Record<string, string> = {
     default: "hsl(0,0%,55%)",
 };
 
+export const colorFamilies = Object.keys(DEFAULT_FAMILY_COLOR);
+
 export function trackNameToFamily(name: string) {
     for (const [re, family] of NAME_TO_FAMILY) {
         if (re.test(name)) return family;

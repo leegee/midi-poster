@@ -1,14 +1,13 @@
 import { For } from "solid-js";
-import { DEFAULT_FAMILY_COLOR, } from "~/colours";
 import { setFamilyColor, getFamilyColor } from "~/stores/color";
 import ColorPicker from "./ColorPicker";
+import { colorFamilies } from "~/colours";
 
 export default function FamilyColorEditor() {
-    const families = Object.keys(DEFAULT_FAMILY_COLOR);
 
     return (
         <section>
-            <For each={families}>
+            <For each={colorFamilies}>
                 {(family) => (
                     <ColorPicker
                         label={family}
