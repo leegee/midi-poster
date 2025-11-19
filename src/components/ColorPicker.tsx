@@ -3,25 +3,63 @@ import { Portal } from "solid-js/web";
 
 interface ColorPickerProps {
     label?: string;
-    value: string; // rgba(r,g,b,a)
+    value: string; // any valid CSS color
     onChange: (newColor: string) => void;
 }
 
 export default function ColorPicker(props: ColorPickerProps) {
     const [open, setOpen] = createSignal(false);
-    const [tempColor, setTempColor] = createSignal(props.value);
+
+    const [h, setH] = createSignal(0);
+    const [s, setS] = createSignal(0);
+    const [l, setL] = createSignal(0);
     const [alpha, setAlpha] = createSignal(1);
+
+    const [tempColorStr, setTempColorStr] = createSignal("");
+
     let canvasRef: HTMLCanvasElement | undefined;
 
-    const rgbaToComponents = (rgba: string) => {
-        const m = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+),?\s*([\d.]*)?\)/);
-        return m
-            ? { r: parseInt(m[1]), g: parseInt(m[2]), b: parseInt(m[3]), a: m[4] ? parseFloat(m[4]) : 1 }
-            : { r: 0, g: 0, b: 0, a: 1 };
+    // Convert any CSS color to {r,g,b,a}
+    const parseCssColor = (css: string) => {
+        const el = document.createElement("div");
+        el.style.color = css;
+        document.body.appendChild(el);
+        const rgb = getComputedStyle(el).color;
+        document.body.removeChild(el);
+
+        const m = rgb.match(/rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)/);
+        if (!m) return { r: 0, g: 0, b: 0, a: 1 };
+        return {
+            r: parseInt(m[1]),
+            g: parseInt(m[2]),
+            b: parseInt(m[3]),
+            a: m[4] ? parseFloat(m[4]) : 1
+        };
+    };
+
+    const rgbToHsl = (r: number, g: number, b: number) => {
+        r /= 255;
+        g /= 255;
+        b /= 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h = 0, s = 0, l = (max + min) / 2;
+        const d = max - min;
+        if (d !== 0) {
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h *= 60;
+        }
+        return { h, s: s * 100, l: l * 100 };
     };
 
     function hslToRgb(h: number, s: number, l: number) {
         h /= 360;
+        s /= 100;
+        l /= 100;
         let r: number, g: number, b: number;
         if (s === 0) r = g = b = l;
         else {
@@ -42,7 +80,19 @@ export default function ColorPicker(props: ColorPickerProps) {
         return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
     }
 
-    // Draw the hue/lightness canvas
+    const initFromProps = () => {
+        const { r, g, b, a } = parseCssColor(props.value);
+        const { h: hh, s: ss, l: ll } = rgbToHsl(r, g, b);
+        setH(hh);
+        setS(ss);
+        setL(ll);
+        setAlpha(a);
+    };
+
+    const updateTempColorStr = () => {
+        setTempColorStr(`hsla(${h()}, ${s()}%, ${l()}%, ${alpha()})`);
+    };
+
     const drawCanvas = () => {
         if (!canvasRef) return;
         const ctx = canvasRef.getContext("2d");
@@ -53,10 +103,10 @@ export default function ColorPicker(props: ColorPickerProps) {
         const image = ctx.createImageData(width, height);
 
         for (let y = 0; y < height; y++) {
-            const lightness = 1 - y / height; // top = 1, bottom = 0
+            const lightness = 1 - y / height;
             for (let x = 0; x < width; x++) {
                 const hue = (x / width) * 360;
-                const { r, g, b } = hslToRgb(hue, 1, lightness / 2 + 0.25);
+                const { r, g, b } = hslToRgb(hue, 100, lightness * 100);
                 const idx = (y * width + x) * 4;
                 image.data[idx] = r;
                 image.data[idx + 1] = g;
@@ -68,7 +118,6 @@ export default function ColorPicker(props: ColorPickerProps) {
         ctx.putImageData(image, 0, 0);
     };
 
-    // Pick color from canvas
     const pickColor = (e: MouseEvent) => {
         if (!canvasRef) return;
         const rect = canvasRef.getBoundingClientRect();
@@ -77,46 +126,46 @@ export default function ColorPicker(props: ColorPickerProps) {
         const ctx = canvasRef.getContext("2d");
         if (!ctx) return;
         const data = ctx.getImageData(x, y, 1, 1).data;
-        setTempColor(`rgba(${data[0]},${data[1]},${data[2]},${alpha()})`);
+        const { h: hh, s: ss, l: ll } = rgbToHsl(data[0], data[1], data[2]);
+        setH(hh);
+        setS(ss);
+        setL(ll);
+        updateTempColorStr();
     };
 
     const saveColor = () => {
-        props.onChange(tempColor());
+        props.onChange(tempColorStr());
         setOpen(false);
     };
 
     const cancel = () => {
-        setTempColor(props.value);
-        setAlpha(rgbaToComponents(props.value).a);
+        initFromProps();
+        updateTempColorStr();
         setOpen(false);
     };
 
     onMount(() => {
+        initFromProps();
+        updateTempColorStr();
         if (!canvasRef) return;
         canvasRef.width = 300;
         canvasRef.height = 200;
         drawCanvas();
     });
 
-    // Redraw whenever the picker opens
+    // Redraw when picker opens
     createEffect(() => {
         if (open() && canvasRef) drawCanvas();
     });
 
-    // Update tempColor when alpha changes
-    createEffect(() => {
-        const { r, g, b } = rgbaToComponents(tempColor());
-        setTempColor(`rgba(${r},${g},${b},${alpha()})`);
-    });
+    // Update preview when any component changes
+    createEffect(updateTempColorStr);
 
     return (
         <>
             <div style="display:flex; align-items:center; gap:0.5em;">
-                <button
-                    class="chip"
-                    onClick={() => setOpen(true)}
-                >
-                    <div style={`height: 1em;width:2em; background:${props.value}; cursor:pointer;`} />
+                <button class="chip" onClick={() => setOpen(true)}>
+                    <div style={`height: 1em;width:2em; background:${tempColorStr()}; cursor:pointer;`} />
                     {props.label && <span>{props.label}</span>}
                 </button>
             </div>
@@ -124,12 +173,8 @@ export default function ColorPicker(props: ColorPickerProps) {
             {open() && (
                 <Portal>
                     <div class="overlay blur active" />
-                    <dialog class="surface-container-high active"
-                        onClick={cancel}
-                    >
-                        <div
-                            onClick={(e) => e.stopPropagation()}
-                        >
+                    <dialog class="surface-container-high active" onClick={cancel}>
+                        <div onClick={(e) => e.stopPropagation()}>
                             <canvas
                                 class="no-round border"
                                 ref={canvasRef}
@@ -138,9 +183,8 @@ export default function ColorPicker(props: ColorPickerProps) {
                                 style="cursor:crosshair;"
                                 onClick={pickColor}
                             />
-
                             <div class="padding row">
-                                <div style={`width:32px; height:32px; border:1px solid #000; background:${tempColor()}`} />
+                                <div style={`width:32px; height:32px; border:1px solid #000; background:${tempColorStr()}`} />
                                 <label>Alpha</label>
                                 <input
                                     type="range"
@@ -148,10 +192,9 @@ export default function ColorPicker(props: ColorPickerProps) {
                                     max="1"
                                     step="0.01"
                                     value={alpha()}
-                                    onInput={(e) => setAlpha(parseFloat(e.currentTarget.value))}
+                                    onInput={(e) => { setAlpha(parseFloat(e.currentTarget.value)); updateTempColorStr(); }}
                                 />
                             </div>
-
                             <footer>
                                 <nav class="right-align">
                                     <button class="transparent" onClick={cancel}>Cancel</button>
