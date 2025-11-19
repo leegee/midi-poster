@@ -23,5 +23,8 @@ export default defineConfig({
                 path.resolve(__dirname, 'node_modules/beercss/dist/cdn')
             ]
         }
+    },
+    define: {
+        global: "globalThis"
     }
 });
