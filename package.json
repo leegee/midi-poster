@@ -37,6 +37,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@solid-primitives/storage": "^4.3.3",
     "@tonejs/midi": "^2.0.28",
     "beercss": "^3.12.11",
     "canvg": "^4.0.3",

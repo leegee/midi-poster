@@ -36,7 +36,7 @@ const NAME_TO_FAMILY: [RegExp, string][] = [
     [/^(acoustic grand piano|piano)/i, "piano"],
 ];
 
-const DEFAULT_FAMILY_COLOR: Record<string, string> = {
+export const DEFAULT_FAMILY_COLOR: Record<string, string> = {
     // Woodwinds
     piccolo: "hsla(180,70%,60%, 0.9)",
     flute: "hsla(200,70%,70%, 0.9)",
@@ -85,6 +85,6 @@ export function trackNameToFamily(name: string) {
 
 export let userFamilyColor: Partial<Record<string, string>> = {};
 
-export function getFamilyColor(family: string) {
-    return userFamilyColor[family] ?? DEFAULT_FAMILY_COLOR[family] ?? DEFAULT_FAMILY_COLOR.default;
-}
+// function getFamilyColor(family: string) {
+//     return userFamilyColor[family] ?? DEFAULT_FAMILY_COLOR[family] ?? DEFAULT_FAMILY_COLOR.default;
+// }

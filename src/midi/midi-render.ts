@@ -1,7 +1,8 @@
 // midi-render.ts
 import { type Midi } from "@tonejs/midi";
-import { getFamilyColor, trackNameToFamily } from "../colours";
+import { trackNameToFamily } from "../colours";
 import { DensityCell, DensityFeature } from "~/lib/density-feature";
+import { getFamilyColor } from "~/stores/color";
 
 export const TRACK_SKIP_RE = /^(http|by |Copyright|All Rights)/i;
 
