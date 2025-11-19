@@ -164,11 +164,11 @@ export default function ColorPicker(props: ColorPickerProps) {
     return (
         <>
             <div style="display:flex; align-items:center; gap:0.5em;">
-                <button class="chip" onClick={() => setOpen(true)}>
+                <button class="small transparent" onClick={() => setOpen(true)}>
                     <div style={`height: 1em;width:2em; background:${tempColorStr()}; cursor:pointer;`} />
                     {props.label && <span>{props.label}</span>}
                 </button>
-            </div>
+            </div >
 
             {open() && (
                 <Portal>
@@ -204,7 +204,8 @@ export default function ColorPicker(props: ColorPickerProps) {
                         </div>
                     </dialog>
                 </Portal>
-            )}
+            )
+            }
         </>
     );
 }
