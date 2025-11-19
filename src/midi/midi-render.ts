@@ -147,7 +147,11 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         const familyKey = trackNameToFamily(trackName);
         const color = getFamilyColor(familyKey) ?? getFamilyColor('default') ?? "#ffffff";
 
-        console.log(`${trackName} ... ${color}`);
+        console.log(
+            "%c  %c " + trackName + " ... " + color,
+            `background: ${color}; padding: 0 10px; border: 1px dotted white;`,
+            "" // reset style for the rest of the text
+        );
 
         tracks.push({ name: trackName, color });
 
