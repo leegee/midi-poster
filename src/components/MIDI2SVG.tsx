@@ -100,6 +100,7 @@ export default function MIDI2SVG(props: Props) {
         const { signal } = abortController;
 
         try {
+            setimageUrl(null);
             busyStore.setBusy(true);
 
             if (signal.aborted || myId !== renderSeq) return;
@@ -162,13 +163,13 @@ export default function MIDI2SVG(props: Props) {
         <Show when={imageUrl()} fallback={<p>Upload MIDI files to preview</p>}>
             <Show
                 when={!busyStore.busy}
-                fallback={
-                    <section class="center-align middle-align extra">
-                        <div class="shape loading-indicator extra">
-                            <img class="responsive" src="/favicon.png" />
-                        </div>
-                    </section>
-                }
+            // fallback={
+            //     <section class="center-align middle-align extra">
+            //         <div class="shape loading-indicator extra">
+            //             <img class="responsive" src="/favicon.png" />
+            //         </div>
+            //     </section>
+            // }
             >
                 <fieldset style="display:flex; padding: 2rem; justify-content:center;" class={busyStore.busy ? "busy" : ""}>
                     <legend class="large-text code border">
