@@ -19,7 +19,7 @@ const TIME_DIVISIONS = [
   { label: "16/1", value: 16 },
 ];
 
-const BLEND_MODES = [
+export const BLEND_MODES = [
   "normal",
   "multiply",
   "screen",
@@ -32,7 +32,7 @@ const BLEND_MODES = [
   "exclusion",
   "lighten",
   "darken",
-];
+] as const;
 
 export default function Home() {
   const [activeTab, setActiveTab] = createSignal("overview");
@@ -256,7 +256,7 @@ export default function Home() {
 
               <div class="paired-row">
                 <div class="field">
-                  <label>Scale Width</label>
+                  <label>Scale<br />Width</label>
                   <div class="tooltip">Note scale factor</div>
                   <input type="number" class="input border no-padding"
                     value={args().noteWidthScaleFactor}
@@ -367,7 +367,7 @@ export default function Home() {
                   <div class="tooltip right">Such as "normal," "multiply," or "screen." </div>
                   <select
                     value={args().blendMode}
-                    onChange={(e) => setArgs({ ...args(), blendMode: e.currentTarget.value })}
+                    onChange={(e) => updateArg("blendMode", e.currentTarget.value)}
                   >
                     {BLEND_MODES.map((mode) => (
                       <option value={mode}>{mode}</option>

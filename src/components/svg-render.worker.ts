@@ -12,7 +12,7 @@ export interface RenderRequest {
 }
 
 export interface RenderResponse {
-    pngUrl: string | null;
+    imageUrl: string | null;
 }
 
 const preset = presets.offscreen({ DOMParser });
@@ -33,11 +33,11 @@ self.onmessage = async (ev: MessageEvent<RenderRequest>) => {
         await v.render();
 
         const blob = await canvas.convertToBlob({ type: 'image/png' });
-        const pngUrl = URL.createObjectURL(blob);
+        const imageUrl = URL.createObjectURL(blob);
 
-        self.postMessage({ pngUrl } as RenderResponse);
+        self.postMessage({ imageUrl } as RenderResponse);
     } catch (err) {
         console.error('Worker render failed:', err);
-        self.postMessage({ pngUrl: null } as RenderResponse);
+        self.postMessage({ imageUrl: null } as RenderResponse);
     }
 };

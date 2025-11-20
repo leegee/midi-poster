@@ -1,5 +1,4 @@
 import sharp from "sharp";
-import { type RenderedMidi } from "./midi-render";
 
 export async function writePngFromSvg(
     svg: string,

@@ -11,15 +11,17 @@ type Props = {
     args: RenderOptions & { calls: number };
 };
 
-type RenderResponse = { pngUrl: string | null };
+type RenderResponse = { imageUrl: string | null };
 
 export default function MIDI2SVG(props: Props) {
-    const [pngUrl, setPngUrl] = createSignal<string | null>(null);
+    const [imageUrl, setimageUrl] = createSignal<string | null>(null);
     const [currentCallId, setCurrentCallId] = createSignal(-1);
 
     let renderSeq = 0;
     let lastAbortController: AbortController | null = null;
     let worker: Worker | null = null;
+    let lastFiles: File[] = [];
+    let lastArgs: Props["args"] | null = null;
 
     // Initialize worker only on client
     if (typeof window !== "undefined" && !worker) {
@@ -33,7 +35,7 @@ export default function MIDI2SVG(props: Props) {
             worker.terminate();
             worker = null;
         }
-        if (pngUrl()) URL.revokeObjectURL(pngUrl()!);
+        if (imageUrl()) URL.revokeObjectURL(imageUrl()!);
         if (lastAbortController) lastAbortController.abort();
         try {
             // @ts-ignore
@@ -41,14 +43,50 @@ export default function MIDI2SVG(props: Props) {
         } catch { }
     });
 
+    // Watch props
+    createEffect(() => {
+        if (!props.midiFiles.length) {
+            if (imageUrl()) URL.revokeObjectURL(imageUrl()!);
+            setimageUrl(null);
+            return;
+        }
+
+        if (!propsChanged(props.midiFiles, props.args)) return;
+
+        debouncedRender(props.midiFiles, props.args);
+    });
+
     const propsChanged = (files: File[], args: Props["args"]) => {
-        if (!files.length) return true;
-        return true;
+        // If no files, clear but don't re-render repeatedly
+        if (!files.length) {
+            lastFiles = [];
+            lastArgs = null;
+            return true;
+        }
+
+        // Check if file list changed (only checking name + size is enough here)
+        const filesChanged =
+            files.length !== lastFiles.length ||
+            files.some((f, i) => !lastFiles[i] || f.name !== lastFiles[i].name || f.size !== lastFiles[i].size);
+
+        // Check args (shallow compare)
+        const argsChanged =
+            !lastArgs ||
+            Object.keys(args).some(k => (args as any)[k] !== (lastArgs as any)[k]);
+
+        // Update snapshots if changed
+        if (filesChanged || argsChanged) {
+            lastFiles = files.slice();
+            lastArgs = { ...args };
+            return true;
+        }
+
+        return false;
     };
 
     const debouncedRender = debounce(async (files: File[], args: Props["args"]) => {
         if (!files.length) {
-            setPngUrl(null);
+            setimageUrl(null);
             return;
         }
 
@@ -64,48 +102,11 @@ export default function MIDI2SVG(props: Props) {
         try {
             busyStore.setBusy(true);
 
-            const { Midi } = await import("@tonejs/midi/dist/Midi.js");
             if (signal.aborted || myId !== renderSeq) return;
 
             // Only take the last file for now
             const file = files[files.length - 1];
-            const buffer = await file.arrayBuffer();
-            if (signal.aborted || myId !== renderSeq) return;
-
-            const midi = new Midi(buffer);
-            if (signal.aborted || myId !== renderSeq) return;
-
-            const rendered = renderMidi(midi, args);
-
-            if (rendered.density && rendered.densityMeta) {
-                rendered.features = extractDensityFeatures(
-                    rendered.density,
-                    rendered.densityMeta,
-                    rendered.width,
-                    rendered.height,
-                    5
-                );
-            }
-
-            const { svg } = createSvg([rendered], args);
-            if (signal.aborted || myId !== renderSeq) return;
-
-            if (!worker) return;
-
-            // Setup worker listener
-            worker.onmessage = (ev: MessageEvent<RenderResponse>) => {
-                if (ev.data.pngUrl && myId === renderSeq) {
-                    if (pngUrl()) URL.revokeObjectURL(pngUrl()!);
-                    setPngUrl(ev.data.pngUrl);
-                }
-            };
-
-            // Post SVG to worker
-            worker.postMessage({
-                svg,
-                width: Number(args.targetWidth ?? args.width),
-                height: Number(args.targetHeight ?? args.height),
-            });
+            await render(file, args);
 
         } catch (err: any) {
             if (err?.name !== "AbortError") console.error("Render failed:", err);
@@ -115,21 +116,50 @@ export default function MIDI2SVG(props: Props) {
         }
     }, 300);
 
-    // Watch props
-    createEffect(() => {
-        if (!props.midiFiles.length) {
-            if (pngUrl()) URL.revokeObjectURL(pngUrl()!);
-            setPngUrl(null);
-            return;
+    async function render(file: File, args: RenderOptions) {
+        const { Midi } = await import("@tonejs/midi/dist/Midi.js");
+
+        const buffer = await file.arrayBuffer();
+
+        const midi = new Midi(buffer);
+
+        const rendered = renderMidi(midi, args);
+
+        if (rendered.density && rendered.densityMeta) {
+            rendered.features = extractDensityFeatures(
+                rendered.density,
+                rendered.densityMeta,
+                rendered.width,
+                rendered.height,
+                5
+            );
         }
 
-        if (!propsChanged(props.midiFiles, props.args)) return;
+        const { svg } = createSvg([rendered], args);
 
-        debouncedRender(props.midiFiles, props.args);
-    });
+        if (!worker) return;
+
+        // Setup worker listener
+        worker.onmessage = (ev: MessageEvent<RenderResponse>) => {
+            console.log(ev);
+            if (ev.data.imageUrl
+                // && myId === renderSeq
+            ) {
+                if (imageUrl()) URL.revokeObjectURL(imageUrl()!);
+                console.log('Set new image')
+                setimageUrl(ev.data.imageUrl);
+            }
+        };
+
+        worker.postMessage({
+            svg,
+            width: Number(args.targetWidth ?? args.width),
+            height: Number(args.targetHeight ?? args.height),
+        });
+    }
 
     return (
-        <Show when={pngUrl()} fallback={<p>Upload MIDI files to preview</p>}>
+        <Show when={imageUrl()} fallback={<p>Upload MIDI files to preview</p>}>
             <Show
                 when={!busyStore.busy}
                 fallback={
@@ -146,7 +176,7 @@ export default function MIDI2SVG(props: Props) {
                     </legend>
 
                     <img
-                        src={pngUrl()!}
+                        src={imageUrl()!}
                         alt="MIDI visualization"
                         style={{
                             width: props.args.targetWidth ? `${props.args.targetWidth}px` : "auto",
@@ -158,4 +188,9 @@ export default function MIDI2SVG(props: Props) {
             </Show>
         </Show>
     );
+}
+
+async function hash(svg: string) {
+    const a = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(svg));
+    return Array.from(new Uint8Array(a), b => b.toString(16).padStart(2, "0")).join("");
 }
