@@ -35,9 +35,10 @@ p {
   }
 }
 
-
-
-.controls {
+.full-height-panel {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   width: clamp(240pt, 20vw, 420px);
   padding: 0.5rem;
   display: flex;
@@ -46,59 +47,64 @@ p {
   width: clamp(240pt, 20vw, 420px);
   max-width: 100%;
   padding: 0.5rem;
-
   background-color: var(--surface-container) !important;
 
-  fieldset,
-  fieldset legend {
-    background-color: var(--surface-container-high) !important;
-  }
+  .scrollable-panel {
+    flex: 1;
+    overflow: auto;
 
-  .whole-row,
-  .paired-row {
-    display: flex !important;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1em;
-    gap: 0.5rem;
-    width: 100%;
-  }
+    fieldset,
+    fieldset legend {
+      background-color: var(--surface-container-high) !important;
+    }
 
-  .whole-row>.field {
-    width: 100% !important;
-    max-width: 100% !important;
-    height: 100%;
-  }
+    .whole-row,
+    .paired-row {
+      display: flex !important;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1em;
+      gap: 0.5rem;
+      width: 100%;
+    }
 
-  .whole-row>.field>input,
-  .whole-row>.field>select {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
+    .whole-row>.field {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: 100%;
+    }
 
-  .paired-row>.field {
-    flex: 1 1 calc(50% - 1em);
-    min-width: 0;
-    max-width: 50%;
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    border-color: 1pt solid var(--on-surface-container-high) !important;
-    height: 100%;
-  }
+    .whole-row>.field>input,
+    .whole-row>.field>select {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
 
-  .switch-field {
-    padding: 1em;
+    .paired-row>.field {
+      flex: 1 1 calc(50% - 1em);
+      min-width: 0;
+      max-width: 50%;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      border-color: 1pt solid var(--on-surface-container-high) !important;
+      height: 100%;
+    }
 
-    span {
-      padding-left: 1em;
+    .switch-field {
+      padding: 1em;
+
+      span {
+        padding-left: 1em;
+      }
     }
   }
+
 
   label {
     font-size: 0.7rem !important;

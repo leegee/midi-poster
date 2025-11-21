@@ -99,7 +99,7 @@ export default function Home() {
 
   return (
     <>
-      <nav class={"left controls left-margin " + (busyStore.busy ? " busy " : "")}>
+      <nav class={"full-height-panel left left-margin " + (busyStore.busy ? " busy " : "")}>
         <header>
           <nav>
             <button class={"small circle " + (midiFiles().length > 0 ? 'transparent' : '')}>
@@ -152,24 +152,9 @@ export default function Home() {
               </For>
             </section>
           </Show>
-          {/* 
-          <div>
-            <button class={"no-margin left-round " + (activeTab() === "overview" ? "fill" : "border")}
-              onClick={() => setActiveTab("overview")}
-            >
-              <i>info</i>
-              <span>Overview</span>
-            </button>
-            <button class={"no-margin right-round " + (activeTab() === "colors" ? "fill" : "border")}
-              onClick={() => setActiveTab("colors")}
-            >
-              <i>palette</i>
-              <span>Colours</span>
-            </button>
-          </div> */}
         </header>
 
-        <div class="scroll border no-padding no-margin" style="height: 80vh">
+        <div class="scrollable-panel scroll border no-padding no-margin">
           <div id="overview" class={`page padding ${activeTab() === "overview" ? "active" : ""}`}>
             {/* Dimensions */}
             <fieldset class="tiny-padding border">
