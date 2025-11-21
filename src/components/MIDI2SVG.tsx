@@ -154,8 +154,8 @@ export default function MIDI2SVG(props: Props) {
 
         worker.postMessage({
             svg,
-            width: Number(args.targetWidth ?? args.width),
-            height: Number(args.targetHeight ?? args.height),
+            width: Number(args.width),
+            height: Number(args.height),
         });
     }
 
@@ -173,8 +173,8 @@ export default function MIDI2SVG(props: Props) {
                     "display": "flex",
                     "padding": "2rem",
                     "justify-content": "center",
-                    "min-width": props.args.width ? `${props.args.width}px` : "auto",
-                    "min-height": props.args.height ? `${props.args.height}px` : "auto",
+                    "min-width": props.args.targetWidth ? `${props.args.targetWidth}px` : "auto",
+                    "min-height": props.args.targetHeight ? `${props.args.targetHeight}px` : "auto",
                     "image-rendering": "crisp-edges",
                 }}
 
@@ -187,8 +187,8 @@ export default function MIDI2SVG(props: Props) {
                     src={imageUrl()!}
                     alt="MIDI visualization"
                     style={{
-                        width: props.args.width ? `${props.args.width}px` : "auto",
-                        height: props.args.height ? `${props.args.height}px` : "auto",
+                        width: props.args.targetWidth ? `${props.args.targetWidth}px` : "auto",
+                        height: props.args.targetHeight ? `${props.args.targetHeight}px` : "auto",
                         "image-rendering": "crisp-edges",
                     }}
                 />

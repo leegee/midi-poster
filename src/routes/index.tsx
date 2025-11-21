@@ -232,6 +232,22 @@ export default function Home() {
                     </label>
                   </nav>
                 </div>
+
+                <div class="field">
+                  <nav>
+                    <label class="max">
+                      <p>Use curves</p>
+                    </label>
+                    <div class="tooltip left">Experimental curves</div>
+                    <label class="switch">
+                      <input type="checkbox"
+                        checked={args().useCurves}
+                        onChange={e => updateArg("useCurves", e.currentTarget.checked)}
+                      />
+                      <span></span>
+                    </label>
+                  </nav>
+                </div>
               </div>
 
               <div class="paired-row">
@@ -289,7 +305,7 @@ export default function Home() {
                     <label class="max">
                       <p>Velocity Scales Height</p>
                     </label>
-                    <div class="tooltip right">Normalised across what I don't recall</div>
+                    <div class="tooltip left">Normalised across what I don't recall</div>
                     <label class="switch">
                       <input type="checkbox"
                         checked={args().velocityScaledHeight}
@@ -350,7 +366,7 @@ export default function Home() {
                     <label class="max">
                       <p>Render features</p>
                     </label>
-                    <div class="tooltip right">Render mystery features</div>
+                    <div class="tooltip left">Render mystery features</div>
                     <label class="switch">
                       <input type="checkbox"
                         checked={args().renderFeatures}
@@ -381,7 +397,7 @@ export default function Home() {
                     <label class="max">
                       <p>Double Render</p>
                     </label>
-                    <div class="tooltip right">Render two versions at once...mysterious</div>
+                    <div class="tooltip left">Render two versions at once...mysterious</div>
                     <label class="switch">
                       <input type="checkbox"
                         checked={args().double}
