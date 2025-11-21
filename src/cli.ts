@@ -5,7 +5,7 @@ import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { renderMidi, type RenderedMidi } from "./midi/midi-render";
 import { createSvg, writeSvg } from "./midi/midi-row";
-import { writePngFromSvg } from "./midi/midi-row-server";
+import { writePngFromSvg } from "./midi/png-from-svg.server";
 import { Midi } from "@tonejs/midi";
 
 export const TRACK_SKIP_RE = /^(http|by |Copyright|All Rights)/i;
