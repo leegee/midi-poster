@@ -160,33 +160,39 @@ export default function MIDI2SVG(props: Props) {
     }
 
     return (
-        <Show when={imageUrl()} fallback={<p>Upload MIDI files to preview</p>}>
-            <Show
-                when={!busyStore.busy}
-            // fallback={
-            //     <section class="center-align middle-align extra">
-            //         <div class="shape loading-indicator extra">
-            //             <img class="responsive" src="/favicon.png" />
-            //         </div>
-            //     </section>
-            // }
-            >
-                <fieldset style="display:flex; padding: 2rem; justify-content:center;" class={busyStore.busy ? "busy" : ""}>
-                    <legend class="large-text code border">
-                        <code>{busyStore.busy ? "BUILDING" : props.title}</code>
-                    </legend>
+        <Show when={imageUrl() && !busyStore.busy} fallback={
+            <section class="center-align middle-align extra">
+                <div class="shape loading-indicator extra">
+                    <img class="responsive" src="/favicon.png" />
+                </div>
+            </section>
+        }>
+            <fieldset
+                class={busyStore.busy ? "busy" : ""}
+                style={{
+                    "display": "flex",
+                    "padding": "2rem",
+                    "justify-content": "center",
+                    "min-width": props.args.width ? `${props.args.width}px` : "auto",
+                    "min-height": props.args.height ? `${props.args.height}px` : "auto",
+                    "image-rendering": "crisp-edges",
+                }}
 
-                    <img
-                        src={imageUrl()!}
-                        alt="MIDI visualization"
-                        style={{
-                            width: props.args.targetWidth ? `${props.args.targetWidth}px` : "auto",
-                            height: props.args.targetHeight ? `${props.args.targetHeight}px` : "auto",
-                            "image-rendering": "crisp-edges",
-                        }}
-                    />
-                </fieldset>
-            </Show>
+            >
+                <legend class="large-text code border">
+                    <code>{busyStore.busy ? "BUILDING" : props.title}</code>
+                </legend>
+
+                <img
+                    src={imageUrl()!}
+                    alt="MIDI visualization"
+                    style={{
+                        width: props.args.width ? `${props.args.width}px` : "auto",
+                        height: props.args.height ? `${props.args.height}px` : "auto",
+                        "image-rendering": "crisp-edges",
+                    }}
+                />
+            </fieldset>
         </Show>
     );
 }

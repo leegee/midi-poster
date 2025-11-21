@@ -417,10 +417,12 @@ export default function Home() {
       </nav>
 
       <main class="responsive">
-        <Show when={midiFiles().length > 0}>
+        <Show when={midiFiles().length > 0} fallback={
+          <p>Upload a MIDI file</p>
+        }>
           <For each={midiFiles()}>
             {(file) => (
-              <section class="padding">
+              <section class="padding scroll">
                 <MIDI2SVG midiFiles={[file]} title={file.name} args={args()} />
               </section>
             )}
