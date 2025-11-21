@@ -103,7 +103,7 @@ export default function Home() {
         <header>
           <nav>
             <button class={"small circle " + (midiFiles().length > 0 ? 'transparent' : '')}>
-              <i>attach_file</i>
+              <i>attach_file_add</i>
               <input type="file" multiple accept=".mid" onChange={handleFiles} />
               <div class="tooltip bottom">Add one or more MIDI files</div>
             </button>
