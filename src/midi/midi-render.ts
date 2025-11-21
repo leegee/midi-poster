@@ -216,6 +216,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
 
         const hFinal = r.hBase * (1 + densityScaleFactor * density);
         let shape: "rect" | "star" = ["cymbals"].includes(r.trackFamily) ? "star" : "rect";
+
         const wFinal = shape === "star" ? hFinal * STAR_SCALE : r.wBase;
 
         let yFinal: number;
@@ -259,11 +260,11 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
             h: hScaled,
             color,
             velocity: r.note.velocity ?? 0,
-            rx: softNotes ? hScaled / 2 : 0,
-            ry: softNotes ? hScaled / 2 : 0,
+            rx: softNotes ? Math.min(hScaled / 2, 2) : 0,
+            ry: softNotes ? Math.min(hScaled / 2, 2) : 0,
             shape,
             starPoints,
-            filter: filterId,
+            filter: hFinal > 0 ? filterId : undefined
         });
 
         // ---------------- build curve points ----------------
