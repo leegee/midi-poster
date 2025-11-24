@@ -82,7 +82,7 @@ export interface RenderOptions {
     };
 }
 
-// ---------------------- helpers ----------------------
+// ----helpers----
 
 function makeStarPoints(cx: number, cy: number, radius: number, spikes = 12): string {
     const step = (Math.PI * 2) / (spikes * 2);
@@ -97,7 +97,7 @@ function makeStarPoints(cx: number, cy: number, radius: number, spikes = 12): st
     return path.trim();
 }
 
-// ---------------------- main function ----------------------
+
 
 export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMidi {
     const {
@@ -134,11 +134,12 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         velScale: number;
         hBase: number;
         wBase: number;
+        density?: number;
     }[] = [];
 
     const midiDuration = midi.duration || 1;
 
-    // ------------------ track loop ------------------
+    // track loop
 
     for (const track of midi.tracks) {
         const trackName = track.name || track.instrument.name || "";
@@ -177,7 +178,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         }
     }
 
-    // ------------------ density map ------------------
+    // density map
 
     const tempo = midi.header.tempos?.[0]?.bpm ?? 120;
     const secondsPerBeat = 60 / tempo;
@@ -186,35 +187,35 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
     const timeStep = (timeStepDuration / midi.duration) * width;
     const pitchStep = 1;
 
+    // Store density and also max density per key
     const densityMap = new Map<string, number>();
-    for (const r of tempRects) {
-        const start = Math.floor(r.x / timeStep);
-        const end = Math.floor((r.x + r.wBase) / timeStep);
-        const pitch = Math.floor(r.yBase / pitchStep);
-        for (let t = start; t <= end; t++) {
-            const key = `${t}:${pitch}`;
-            densityMap.set(key, (densityMap.get(key) ?? 0) + 1);
-        }
-    }
-
-    const maxDensity = Math.max(...densityMap.values(), 1);
-
-    // ------------------ finalize rects and build curves ------------------
-
-    const trackCurvePoints: Record<string, CurvePoint[]> = {};
+    let maxDensity = 1;
 
     for (const r of tempRects) {
         const start = Math.floor(r.x / timeStep);
         const end = Math.floor((r.x + r.wBase) / timeStep);
         const pitch = Math.floor(r.yBase / pitchStep);
         let localMax = 0;
+
         for (let t = start; t <= end; t++) {
             const key = `${t}:${pitch}`;
-            localMax = Math.max(localMax, densityMap.get(key) ?? 0);
+            const newVal = (densityMap.get(key) ?? 0) + 1;
+            densityMap.set(key, newVal);
+            localMax = Math.max(localMax, newVal);
         }
-        const density = localMax / maxDensity;
 
-        const hFinal = r.hBase * (1 + densityScaleFactor * density);
+        r.density = localMax; // attach local max directly to the note
+        maxDensity = Math.max(maxDensity, localMax);
+    }
+
+    // finalize rects
+
+    const trackCurvePoints: Record<string, CurvePoint[]> = {};
+
+    for (const r of tempRects) {
+        const densityNorm = (r.density ?? 0) / maxDensity;
+
+        const hFinal = r.hBase * (1 + densityScaleFactor * densityNorm);
         let shape: "rect" | "star" = ["cymbals"].includes(r.trackFamily) ? "star" : "rect";
 
         const wFinal = shape === "star" ? hFinal * STAR_SCALE : r.wBase;
@@ -246,10 +247,10 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
 
         let color = getFamilyColor(r.trackFamily) ?? "#ffffff";
         if (color.startsWith("hsl")) {
-            color = color.replace(/(\d+)%\)$/i, (match, l) => `${Math.min(100, +l + (100 - +l) * 0.3 * density)}% )`);
+            color = color.replace(/(\d+)%\)$/i, (match, l) => `${Math.min(100, +l + (100 - +l) * 0.3 * densityNorm)}% )`);
         } else if (color.startsWith("rgb")) {
             const rgbMatch = color.match(/\d+/g)?.map(Number) ?? [];
-            const boosted = (v: number) => Math.min(255, Math.floor(v + (255 - v) * 0.3 * density));
+            const boosted = (v: number) => Math.min(255, Math.floor(v + (255 - v) * 0.3 * densityNorm));
             color = `rgb(${boosted(rgbMatch[0] || 0)},${boosted(rgbMatch[1] || 0)},${boosted(rgbMatch[2] || 0)})`;
         }
 
@@ -267,12 +268,12 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
             filter: hFinal > 0 ? filterId : undefined
         });
 
-        // ---------------- build curve points ----------------
+        // Build curve points
         if (trackCanCurve[r.trackFamily]) {
             const pointX = xScaled + wScaled / 2;
             const pointY = yScaled + hScaled / 2;
             const thickness = Math.min(
-                thicknessFromVelocity(r.note.velocity ?? 0, density, curveOptions),
+                thicknessFromVelocity(r.note.velocity ?? 0, densityNorm, curveOptions),
                 curveOptions.maxWidth
             );
             (trackCurvePoints[r.trackFamily] ??= []).push({
@@ -283,14 +284,14 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         }
     }
 
-    // ---------------- generate curves ----------------
+    // generate curves
+
     if (useCurves) {
         for (const [family, points] of Object.entries(trackCurvePoints)) {
             if (!trackCanCurve[family]) continue;
             if (!points || points.length < 2) continue;
 
             const sortedPoints = points.slice().sort((a, b) => a.x - b.x);
-
             const mergedSegments: CurvePoint[][] = [];
             let buffer: CurvePoint[] = [];
 
@@ -321,7 +322,7 @@ export function renderMidi(midi: Midi, options: RenderOptions = {}): RenderedMid
         }
     }
 
-    // ---------------- density map for external use ----------------
+    // density array for output
 
     const density: DensityCell[] = [];
     for (const [key, value] of densityMap.entries()) {
